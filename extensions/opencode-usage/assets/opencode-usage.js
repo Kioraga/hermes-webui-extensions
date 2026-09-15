@@ -441,12 +441,13 @@
     node.setAttribute('aria-label', 'OpenCode Go usage');
 
     const head = el('div', 'hwx-ocu-head');
-    head.appendChild(el('span', 'hwx-ocu-head-title', 'OpenCode Go'));
+    head.appendChild(el('span', 'hwx-ocu-head-title', 'OpenCode Go Usage'));
     headBadge = el('span', 'hwx-ocu-badge hwx-ocu-head-badge');
     head.appendChild(headBadge);
     head.appendChild(el('span', 'hwx-ocu-stamp', ''));
 
-    const refreshBtn = el('button', 'hwx-ocu-icon-btn hwx-ocu-refresh', '⟳');
+    const refreshBtn = el('button', 'hwx-ocu-icon-btn hwx-ocu-refresh');
+    refreshBtn.appendChild(el('span', 'hwx-ocu-refresh-icon', '⟳'));
     refreshBtn.type = 'button';
     refreshBtn.title = 'Refresh now';
     refreshBtn.setAttribute('aria-label', 'Refresh now');

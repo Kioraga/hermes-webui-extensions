@@ -88,9 +88,10 @@
   line-height: 1;
 }
 .hwx-ocu-icon-btn:hover { color: var(--text, #111); background: var(--hover-bg, rgba(127, 127, 127, .14)); }
-/* While load() is fetching, the refresh icon spins and turns accent-coloured
-   so there is visible feedback that the data is updating. */
-.hwx-ocu-icon-btn.hwx-ocu-refresh--active {
+.hwx-ocu-refresh-icon { display: inline-block; line-height: 1; }
+/* While load() is fetching, the refresh GLYPH spins and turns accent-coloured
+   (the button box itself stays still) so there is visible feedback. */
+.hwx-ocu-refresh--active .hwx-ocu-refresh-icon {
   color: var(--accent, #3889fd);
   animation: hwx-ocu-spin .9s linear infinite;
 }
