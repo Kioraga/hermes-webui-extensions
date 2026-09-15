@@ -107,29 +107,6 @@
     return node;
   }
 
-  function fmtInt(value) {
-    const n = Number(value || 0);
-    if (!Number.isFinite(n)) return '0';
-    return Math.round(n).toLocaleString();
-  }
-
-  function fmtTokens(value) {
-    const n = Number(value || 0);
-    if (!Number.isFinite(n) || n <= 0) return '0';
-    if (n >= 1e9) return (n / 1e9).toFixed(2) + ' B';
-    if (n >= 1e6) return (n / 1e6).toFixed(2) + ' M';
-    if (n >= 1e3) return (n / 1e3).toFixed(1) + ' k';
-    return String(Math.round(n));
-  }
-
-  function fmtUsd(value) {
-    const n = Number(value || 0);
-    if (!Number.isFinite(n)) return '—';
-    if (n === 0) return '$0';
-    if (n < 0.01) return '$' + n.toFixed(4);
-    return '$' + n.toFixed(2);
-  }
-
   function fmtClock(epochSeconds) {
     const n = Number(epochSeconds);
     if (!Number.isFinite(n) || n <= 0) return '';
@@ -288,24 +265,6 @@
     return row;
   }
 
-  function localSummary(local, windowKey) {
-    const byWindow = (local && local.by_window) || {};
-    const bucket = byWindow[windowKey];
-    if (!bucket) return null;
-    const line = el('p', 'hwx-ocu-note');
-    const requests = Number(bucket.requests || 0);
-    const inTok = Number(bucket.input_tokens || 0);
-    const outTok = Number(bucket.output_tokens || 0);
-    const cacheTok = Number(bucket.cache_read_tokens || 0);
-    line.textContent = 'Measured by Hermes (' + (WINDOW_LABELS[windowKey] || windowKey) + '): '
-      + fmtInt(requests) + (requests === 1 ? ' request' : ' requests')
-      + ' · in ' + fmtTokens(inTok)
-      + ' · out ' + fmtTokens(outTok)
-      + (cacheTok > 0 ? ' · cache ' + fmtTokens(cacheTok) : '')
-      + ' · list-price value ≈ ' + fmtUsd(bucket.estimated_cost_usd);
-    return line;
-  }
-
   // The panel header already carries the "OpenCode Go" title and the status
   // badge, so the body only holds the window bars (+ any error text).
   function renderGo(body, payload) {
@@ -332,9 +291,6 @@
       body.appendChild(el('p', 'hwx-ocu-note',
         messages[error] || ('The quota lookup failed (' + error + ').')));
     }
-
-    const summary = localSummary(go.local, 'rolling');
-    if (summary) body.appendChild(summary);
   }
 
   function renderError(body, title, detail) {
@@ -486,13 +442,6 @@
     refreshBtn.addEventListener('click', () => load(true));
     head.appendChild(refreshBtn);
 
-    const closeBtn = el('button', 'hwx-ocu-icon-btn hwx-ocu-close', '✕');
-    closeBtn.type = 'button';
-    closeBtn.title = 'Close';
-    closeBtn.setAttribute('aria-label', 'Close');
-    closeBtn.addEventListener('click', closePanel);
-    head.appendChild(closeBtn);
-
     node.appendChild(head);
     node.appendChild(el('div', 'hwx-ocu-body', ''));
     return node;
@@ -543,9 +492,6 @@
     document.addEventListener('keydown', keyHandler, true);
     document.addEventListener('mousedown', outsideHandler, true);
     document.addEventListener('click', outsideHandler, true);
-
-    const closeBtn = panel.querySelector('.hwx-ocu-close');
-    if (closeBtn) closeBtn.focus();
 
     load(false);
     scheduleRefresh();

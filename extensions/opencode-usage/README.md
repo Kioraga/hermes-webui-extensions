@@ -24,10 +24,6 @@ endpoint. Once data arrives the chip itself shows those three percentages as
 - Shows one bar per plan window (rolling 5 h / weekly / monthly) with the percent,
   the window status, and a live "resets in …" countdown derived from OpenCode's
   `resetsAt`.
-- A one-line summary below also reports the usage Hermes itself recorded for
-  Go-billed models (requests, tokens, list-price value). This is informational —
-  Go is a flat $10/month subscription, so it is the *list-price value* of what the
-  plan carried, not something billed on top.
 - Configurable in **Settings → Extensions → OpenCode Go Usage**: auto-refresh
   on/off and the refresh interval.
 
@@ -36,13 +32,6 @@ endpoint. Once data arrives the chip itself shows those three percentages as
 `GET https://opencode.ai/zen/go/v1/usage` is a documented endpoint that returns the
 Go plan's window percentages and reset timestamps. This extension shows that
 verbatim — it is OpenCode's own accounting, no scraping.
-
-The one-line local summary is computed from Hermes' own `session_model_usage`
-table in `~/.hermes/state.db` (opened read-only), filtered to Go-billed rows. It
-is an approximation: rows are cumulative per (session, model, provider, task) and
-carry only `first_seen`/`last_seen`, so a row counts **whole** in a window when its
-`last_seen` falls inside it, and the local window is a trailing 5 h rather than the
-plan's own reset-anchored window.
 
 ## Current Shape
 
@@ -53,7 +42,6 @@ Hermes WebUI page
   -> same-origin sidecar proxy: /api/extensions/opencode-usage/sidecar/api/usage
   -> sidecar (127.0.0.1:17799, token-v1)
        -> GET opencode.ai/zen/go/v1/usage        (Go API key, live plan windows)
-       -> ~/.hermes/state.db, SQLite mode=ro     (Go local summary)
        -> ~/.hermes/.env                         (key, when not in the environment)
 ```
 
@@ -153,16 +141,6 @@ blame your credentials for an edge rejection.
 
 ## Known Limitations
 
-- **Go's cost figure is informational.** Go is a flat monthly subscription, so the
-  estimated cost is the *list-price value* of what you consumed, not a charge.
-- **The local summary is an approximation.** `session_model_usage` rows are
-  cumulative per (session, model, provider, task) with only `first_seen` /
-  `last_seen` — Hermes stores no per-request timestamp series. A row is attributed
-  to a window **whole** when its `last_seen` falls inside it, and it is a trailing
-  5 h window, not the plan's reset-anchored one. Only the Go percentages come from
-  OpenCode.
-- **Prices drift.** The embedded list-price table mirrors OpenCode's published
-  prices at the time of writing; it only affects the informational list-price line.
 - **Loopback only.** Sidecars cannot work against a bridge-networked WebUI
   container: `127.0.0.1` is namespace-local, so core and sidecar must share a
   network namespace and the state dir.
