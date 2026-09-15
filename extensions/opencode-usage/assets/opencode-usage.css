@@ -2,45 +2,36 @@
    Every class is prefixed hwx-ocu- so it cannot collide with core styles, and
    colors come from core CSS variables so the panel follows the active theme/skin. */
 
-/* Same shape and size as the other chips in .composer-left
-   (.composer-model-chip / .composer-toolsets-chip / .composer-profile-chip):
-   a transparent pill with the same padding, radius and hover behaviour. */
+/* A passive status chip — not a button. Same size/shape as its neighbours in
+   .composer-left, but with no hover affordance, no focus and no click. It only
+   reacts to hover (via JS) to reveal the usage panel. */
 .hwx-ocu-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 10px 8px 12px;
   border-radius: 999px;
-  border: 1px solid transparent;
-  background-color: transparent;
   color: var(--muted, #888);
   font: inherit;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   flex-shrink: 0;
-  cursor: pointer;
-  transition: color .15s, background-color .15s, border-color .15s;
-}
-.hwx-ocu-btn:hover,
-.hwx-ocu-btn[aria-expanded="true"] {
-  color: var(--text, #111);
-  background-color: var(--hover-bg, rgba(127, 127, 127, .12));
+  user-select: none;
+  cursor: default;
 }
 /* Once the plan percentages are on the chip, keep them legible and distinct. */
 .hwx-ocu-btn--live { color: var(--accent, #3889fd); }
-.hwx-ocu-btn--live:hover { color: var(--accent, #3889fd); }
 
 .hwx-ocu-panel {
   position: fixed;
   z-index: 200;
-  /* left/bottom are computed at open time (placePanel) so the popover opens
-     above the chip, right edges flush. */
+  /* left/bottom are computed at open time (placePanel): the panel grows to the
+     RIGHT of the chip, and its bottom edge leaves room for the callout tail. */
   width: min(360px, calc(100vw - 24px));
   max-height: min(70vh, 620px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   /* Same surface as core's composer dropdowns (.composer-toolsets-dropdown,
      .ws-dropdown): --surface + --border2 + the upward shadow. */
   background: var(--surface, var(--bg, #fff));
@@ -49,6 +40,25 @@
   box-shadow: 0 -4px 24px rgba(0, 0, 0, .4);
   color: var(--text, #111);
   font-size: 13px;
+  /* Entry animation matching the context-window tooltip (fade + nudge). */
+  animation: hwx-ocu-pop .14s ease;
+}
+/* Callout tail pointing down at the chip, like the context-window tooltip.
+   Horizontal position is set by placePanel via --hwx-ocu-tail-x (the chip's
+   centre). The panel must NOT clip children so the tail can poke out. */
+.hwx-ocu-panel::after {
+  content: '';
+  position: absolute;
+  left: var(--hwx-ocu-tail-x, 24px);
+  top: 100%;
+  transform: translateX(-50%);
+  border-width: 7px 7px 0 7px;
+  border-style: solid;
+  border-color: var(--surface, var(--bg, #fff)) transparent transparent transparent;
+}
+@keyframes hwx-ocu-pop {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .hwx-ocu-head {
@@ -71,7 +81,7 @@
 }
 .hwx-ocu-icon-btn:hover { color: var(--text, #111); background: var(--hover-bg, rgba(127, 127, 127, .14)); }
 
-.hwx-ocu-body { overflow-y: auto; padding: 10px 12px 14px; }
+.hwx-ocu-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 12px 14px; }
 .hwx-ocu-body p { margin: 0 0 8px; }
 
 .hwx-ocu-error-title { font-weight: 600; margin-bottom: 6px; }

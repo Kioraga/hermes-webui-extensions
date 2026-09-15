@@ -256,10 +256,7 @@
     if (!button) return;
     const label = button.querySelector('.hwx-ocu-btn-label');
     if (label) label.textContent = text;
-    const live = text !== BUTTON_LABEL;
-    button.classList.toggle('hwx-ocu-btn--live', live);
-    button.title = live ? 'OpenCode Go usage — ' + text : 'OpenCode Go usage';
-    button.setAttribute('aria-label', live ? 'OpenCode Go usage: ' + text : 'OpenCode Go usage');
+    button.classList.toggle('hwx-ocu-btn--live', text !== BUTTON_LABEL);
   }
 
   // Populate the chip on page load so the percentages are visible without
@@ -429,10 +426,7 @@
     if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
     panel = null;
     headBadge = null;
-    if (button) {
-      button.setAttribute('aria-expanded', 'false');
-      button.focus();
-    }
+    if (button && typeof button.focus === 'function') button.focus();
     lastFocus = null;
   }
 
@@ -504,21 +498,22 @@
     return node;
   }
 
-  // Anchor the popover above the chip, right edges flush (the panel grows
-  // leftwards from the chip), then clamp it into the viewport.
+  // The panel grows to the RIGHT of the chip (left edges flush); its bottom
+  // edge leaves room for the callout tail, aligned to the chip's centre.
   function placePanel() {
     if (!panel || !button) return;
     const anchor = button.getBoundingClientRect();
     const width = panel.offsetWidth || 360;
-    let left = anchor.right - width;
-    if (left < 8) left = 8;
+    let left = anchor.left;
     if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+    if (left < 8) left = 8;
     const bottom = Math.max(8, window.innerHeight - anchor.top + 8);
     panel.style.left = left + 'px';
     panel.style.right = 'auto';
     panel.style.bottom = bottom + 'px';
     panel.style.top = 'auto';
     panel.style.maxHeight = Math.max(180, Math.min(620, window.innerHeight - bottom - 8)) + 'px';
+    panel.style.setProperty('--hwx-ocu-tail-x', String(Math.max(12, anchor.width / 2)) + 'px');
   }
 
   function openPanel() {
@@ -529,7 +524,6 @@
     document.body.appendChild(panel);
     placePanel();
     panel.style.visibility = '';
-    if (button) button.setAttribute('aria-expanded', 'true');
 
     keyHandler = (event) => {
       if (event.key === 'Escape') {
@@ -559,19 +553,12 @@
 
   // ── composer chip ─────────────────────────────────────────────────────────
 
+  // A passive status chip, not a button: no focus, no click, no visual hover
+  // affordance and no title tooltip. It only reveals the panel on hover.
   function buildButton() {
-    const node = el('button', 'hwx-ocu-btn');
-    node.type = 'button';
+    const node = el('span', 'hwx-ocu-btn');
     node.id = 'btnOpenCodeUsage';
-    node.title = 'OpenCode Go usage';
-    node.setAttribute('aria-label', 'OpenCode Go usage');
-    node.setAttribute('aria-expanded', 'false');
-    node.setAttribute('aria-haspopup', 'dialog');
     node.appendChild(el('span', 'hwx-ocu-btn-label', BUTTON_LABEL));
-    node.addEventListener('click', (event) => {
-      event.stopPropagation();
-      openPanel(); // toggles; touch / click fallback, like the context indicator
-    });
     node.addEventListener('mouseenter', hoverOpen);
     node.addEventListener('mouseleave', hoverLeave);
     return node;

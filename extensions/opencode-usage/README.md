@@ -9,12 +9,15 @@ endpoint. Once data arrives the chip itself shows those three percentages as
 
 ## What It Does
 
-- Adds an **OpenCode Go** chip to the composer footer, right after
-  `.composer-divider`. It behaves like the core context-window indicator:
-  hovering the chip opens the panel (after a short delay) and moving away closes
-  it, with a grace period so the cursor can reach the panel; the panel stays open
-  while hovered. Clicking the chip still toggles the panel (touch/keyboard
-  fallback), and `Escape` / clicking outside dismisses it.
+- Adds a passive **OpenCode Go** status chip to the composer footer, right after
+  `.composer-divider`. It is **not a button**: no focus, no click, no hover
+  highlight and no title tooltip. Like the core context-window indicator,
+  hovering the chip opens the panel after a short delay and moving away closes it
+  with a grace period so the cursor can reach it; the panel stays open while
+  hovered, and `Escape` / clicking outside dismiss it.
+- The panel grows **to the right of the chip**, shows a small **callout tail**
+  pointing down at the chip, and animates in (fade + 5 px nudge, `.14s` ease) —
+  the same visual language as the context-window tooltip.
 - As soon as usage is fetched the chip label becomes the three plan percentages,
   e.g. `Go: 11%·4%·23%` (rolling · weekly · monthly). Without data (sidecar down,
   no key) it stays `OpenCode Go`.
@@ -175,10 +178,11 @@ blame your credentials for an edge rejection.
 - `extension-settings`: `HermesExtensionSettings.settingsForExtension(id)` with
   `settings_schema` + `permissions.storage.owned: true`
 - DOM integration point: `.composer-footer` → `.composer-divider` (the chip is
-  inserted right after it, inside `.composer-left`); `.composer-box` gives the
-  right edge the panel aligns to. Styling mirrors the core chips
-  (`.composer-*-chip`) and composer dropdowns (`.composer-toolsets-dropdown`,
-  `.ws-dropdown`): pill chip, `--surface` + `--border2` + `0 -4px 24px` shadow.
+  inserted right after it, inside `.composer-left`), and the panel grows to the
+  right of the chip with a callout tail pointing at it. Styling mirrors the core
+  chips (`.composer-*-chip`) and context tooltip (`.ctx-tooltip`): pill chip,
+  `--surface` + `--border2` + `0 -4px 24px` shadow, `::after` tail and an
+  opacity/translate entry animation.
 - WebUI API surface: `GET /api/extensions/status`
 
 ## Verification
@@ -203,9 +207,10 @@ curl -s http://127.0.0.1:17799/health                                          #
 
 Manual verification:
 
-- hovering the composer's **OpenCode Go** chip opens the panel and its label
-  shows `Go: x%·y%·z%` matching `GET opencode.ai/zen/go/v1/usage` for your key;
-  moving the cursor away closes it
+- hovering the composer's **OpenCode Go** chip opens the panel to its right (with
+  a callout tail and a fade-in); the chip label shows `Go: x%·y%·z%` matching
+  `GET opencode.ai/zen/go/v1/usage` for your key; moving the cursor away closes
+  it
 - the percent bars and "resets in …" countdowns agree with the raw endpoint
 - with the sidecar stopped, the panel explains that the sidecar is not answering
   instead of showing empty bars
