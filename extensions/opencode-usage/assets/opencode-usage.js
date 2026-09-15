@@ -248,6 +248,8 @@
     const row = el('div', 'hwx-ocu-window');
     const top = el('div', 'hwx-ocu-window-top');
     top.appendChild(el('span', 'hwx-ocu-window-label', WINDOW_LABELS[key] || key));
+    const reset = fmtResetIn(resetsAt);
+    if (reset) top.appendChild(el('span', 'hwx-ocu-window-reset', reset));
     row.appendChild(top);
 
     const barRow = el('div', 'hwx-ocu-window-bar-row');
@@ -259,9 +261,6 @@
     barRow.appendChild(bar);
     barRow.appendChild(el('span', 'hwx-ocu-window-pct', fmtPercent(percent)));
     row.appendChild(barRow);
-
-    const reset = fmtResetIn(resetsAt);
-    if (reset) row.appendChild(el('div', 'hwx-ocu-window-reset', reset));
     return row;
   }
 
