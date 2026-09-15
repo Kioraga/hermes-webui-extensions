@@ -24,7 +24,7 @@
   const STATUS_URL = '/api/extensions/status';
   const FALLBACK_KEY = 'hermes-ext-opencode-usage';
   const DEFAULTS = { auto_refresh: true, refresh_seconds: 60 };
-  const WINDOW_LABELS = { rolling: '5 h', weekly: '7 d', monthly: '30 d' };
+  const WINDOW_LABELS = { rolling: '5-hour Usage', weekly: 'Weekly Usage', monthly: 'Monthly Usage' };
   const PERCENT_ORDER = ['rolling', 'weekly', 'monthly'];
   const BUTTON_LABEL = 'OpenCode Go';
   const MOUNT_RETRY_MS = 400;
@@ -33,7 +33,6 @@
 
   let panel = null;
   let button = null;
-  let headBadge = null;
   let lastFocus = null;
   let timer = null;
   let outsideHandler = null;
@@ -128,9 +127,15 @@
     const days = Math.floor(minutes / 1440);
     const hours = Math.floor((minutes % 1440) / 60);
     const mins = minutes % 60;
-    if (days > 0) return 'resets in ' + days + ' d ' + hours + ' h';
-    if (hours > 0) return 'resets in ' + hours + ' h ' + mins + ' min';
-    return 'resets in ' + mins + ' min';
+    if (days > 0) return 'Resets in ' + days + ' d ' + hours + ' h';
+    if (hours > 0) return 'Resets in ' + hours + ' h ' + mins + ' min';
+    return 'Resets in ' + mins + ' min';
+  }
+
+  // One decimal so small plan windows stay readable (11 → 11.0%).
+  function fmtPercent(percent) {
+    const n = Number(percent);
+    return Number.isFinite(n) ? n.toFixed(1) + '%' : '—';
   }
 
   function pctClass(percent, status) {
@@ -141,19 +146,6 @@
     if (n >= 90) return ' hwx-ocu-bar-fill--err';
     if (n >= 70) return ' hwx-ocu-bar-fill--warn';
     return '';
-  }
-
-  function badgeClass(kind) {
-    if (kind === 'err') return 'hwx-ocu-badge hwx-ocu-badge--err hwx-ocu-head-badge';
-    if (kind === 'warn') return 'hwx-ocu-badge hwx-ocu-badge--warn hwx-ocu-head-badge';
-    if (kind === 'ok') return 'hwx-ocu-badge hwx-ocu-badge--ok hwx-ocu-head-badge';
-    return 'hwx-ocu-badge hwx-ocu-head-badge';
-  }
-
-  function setHeaderBadge(text, kind) {
-    if (!headBadge) return;
-    headBadge.textContent = text;
-    headBadge.className = badgeClass(kind);
   }
 
   // ── usage fetch + diagnostics ──────────────────────────────────────────────
@@ -256,28 +248,31 @@
     const row = el('div', 'hwx-ocu-window');
     const top = el('div', 'hwx-ocu-window-top');
     top.appendChild(el('span', 'hwx-ocu-window-label', WINDOW_LABELS[key] || key));
-    top.appendChild(el('span', 'hwx-ocu-window-pct',
-      Number.isFinite(Number(percent)) ? String(Number(percent)) + '%' : '—'));
-    const reset = fmtResetIn(resetsAt);
-    if (reset) top.appendChild(el('span', 'hwx-ocu-window-reset', reset));
     row.appendChild(top);
+
+    const barRow = el('div', 'hwx-ocu-window-bar-row');
     const bar = el('div', 'hwx-ocu-bar');
     const fill = el('div', 'hwx-ocu-bar-fill' + pctClass(percent, status));
     const width = Number.isFinite(Number(percent)) ? Math.min(100, Math.max(0, Number(percent))) : 0;
     fill.style.width = width + '%';
     bar.appendChild(fill);
-    row.appendChild(bar);
+    barRow.appendChild(bar);
+    barRow.appendChild(el('span', 'hwx-ocu-window-pct', fmtPercent(percent)));
+    row.appendChild(barRow);
+
+    const reset = fmtResetIn(resetsAt);
+    if (reset) row.appendChild(el('div', 'hwx-ocu-window-reset', reset));
     return row;
   }
 
-  // The panel header already carries the "OpenCode Go" title and the status
-  // badge, so the body only holds the window bars (+ any error text).
+  // The panel header already carries the "OpenCode Go Usage" title, the
+  // updated stamp and the refresh control; the body only holds the window
+  // bars (+ any error text).
   function renderGo(body, payload) {
     const go = (payload && payload.go) || {};
     const plan = go.plan || {};
 
     if (plan.available) {
-      setHeaderBadge('live', 'ok');
       PERCENT_ORDER.forEach((key) => {
         const window = (plan.windows || {})[key];
         if (!window) return;
@@ -292,14 +287,12 @@
         blocked: 'OpenCode\u2019s edge blocked the request (HTTP 403).',
         unreachable: 'OpenCode could not be reached from the sidecar.',
       };
-      setHeaderBadge(error === 'no_key' ? 'no key' : 'unavailable', error === 'no_key' ? 'warn' : 'err');
       body.appendChild(el('p', 'hwx-ocu-note',
         messages[error] || ('The quota lookup failed (' + error + ').')));
     }
   }
 
   function renderError(body, title, detail) {
-    setHeaderBadge('unavailable', 'err');
     const section = el('section', 'hwx-ocu-section');
     section.appendChild(el('div', 'hwx-ocu-error-title', title));
     if (detail) section.appendChild(el('p', 'hwx-ocu-note', detail));
@@ -337,7 +330,7 @@
     const stamp = panel.querySelector('.hwx-ocu-stamp');
     if (stamp) {
       const generated = payload && payload.generated_at;
-      stamp.textContent = (errorState || !generated) ? '' : 'updated ' + fmtClock(generated);
+      stamp.textContent = (errorState || !generated) ? '' : 'Updated ' + fmtClock(generated);
     }
   }
 
@@ -411,7 +404,6 @@
     keyHandler = null;
     if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
     panel = null;
-    headBadge = null;
     if (button && typeof button.focus === 'function') button.focus();
     lastFocus = null;
   }
@@ -442,8 +434,6 @@
 
     const head = el('div', 'hwx-ocu-head');
     head.appendChild(el('span', 'hwx-ocu-head-title', 'OpenCode Go Usage'));
-    headBadge = el('span', 'hwx-ocu-badge hwx-ocu-head-badge');
-    head.appendChild(headBadge);
     head.appendChild(el('span', 'hwx-ocu-stamp', ''));
 
     const refreshBtn = el('button', 'hwx-ocu-icon-btn hwx-ocu-refresh');

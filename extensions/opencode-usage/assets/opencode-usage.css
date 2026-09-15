@@ -88,6 +88,7 @@
   line-height: 1;
 }
 .hwx-ocu-icon-btn:hover { color: var(--text, #111); background: var(--hover-bg, rgba(127, 127, 127, .14)); }
+.hwx-ocu-icon-btn:disabled { color: var(--muted, #888); cursor: default; opacity: .55; }
 .hwx-ocu-refresh-icon { display: inline-block; line-height: 1; }
 /* While load() is fetching, the refresh GLYPH spins and turns accent-coloured
    (the button box itself stays still) so there is visible feedback. */
@@ -118,14 +119,15 @@
 .hwx-ocu-badge--ok { color: var(--accent, #2e7d32); }
 
 .hwx-ocu-window { margin-bottom: 10px; }
-.hwx-ocu-window-top { display: flex; align-items: baseline; gap: 8px; font-size: 12px; }
+.hwx-ocu-window-top { display: flex; align-items: baseline; font-size: 12px; }
 .hwx-ocu-window-label { min-width: 42px; color: var(--muted, #888); }
-.hwx-ocu-window-pct { font-variant-numeric: tabular-nums; font-weight: 600; }
-.hwx-ocu-window-reset { margin-left: auto; color: var(--muted, #888); font-size: 11px; }
+.hwx-ocu-window-bar-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.hwx-ocu-window-pct { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 48px; text-align: right; }
+.hwx-ocu-window-reset { margin-top: 4px; color: var(--muted, #888); font-size: 11px; }
 .hwx-ocu-bar {
   position: relative;
+  flex: 1;
   height: 6px;
-  margin-top: 4px;
   border-radius: 999px;
   background: var(--hover-bg, rgba(127, 127, 127, .18));
   overflow: hidden;
