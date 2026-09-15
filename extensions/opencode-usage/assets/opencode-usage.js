@@ -1,12 +1,13 @@
 (() => {
   'use strict';
 
-  // ── OpenCode Usage extension for Hermes WebUI ────────────────────────────
-  // Adds a titlebar button (top-right corner) that opens a panel with the
-  // OpenCode Go plan usage: the plan's own live windows (rolling / weekly /
-  // monthly percent + reset time) straight from the sidecar, which calls
-  // OpenCode's documented /zen/go/v1/usage endpoint. A one-line summary also
-  // shows the matching usage Hermes itself recorded for Go-billed models.
+  // ── OpenCode Go Usage extension for Hermes WebUI ─────────────────────────
+  // Adds a chip to the composer footer, right after .composer-divider, that
+  // opens a panel with the OpenCode Go plan usage: the plan's own live windows
+  // (rolling / weekly / monthly percent + reset time) straight from the
+  // sidecar, which calls OpenCode's documented /zen/go/v1/usage endpoint. Once
+  // data arrives the chip itself shows the three percentages ("Go: x%·y%·z%").
+  // A one-line summary also reports the usage Hermes recorded for Go models.
   //
   // All HTTP goes through the consented loopback-sidecar proxy at
   // /api/extensions/opencode-usage/sidecar/… — the API key stays in the sidecar
@@ -22,8 +23,10 @@
   const FALLBACK_KEY = 'hermes-ext-opencode-usage';
   const DEFAULTS = { auto_refresh: true, refresh_seconds: 60 };
   const WINDOW_LABELS = { rolling: '5 h', weekly: '7 d', monthly: '30 d' };
-  const TITLEBAR_RETRY_MS = 400;
-  const TITLEBAR_MAX_TRIES = 25;
+  const PERCENT_ORDER = ['rolling', 'weekly', 'monthly'];
+  const BUTTON_LABEL = 'OpenCode Go';
+  const MOUNT_RETRY_MS = 400;
+  const MOUNT_MAX_TRIES = 25;
 
   let panel = null;
   let button = null;
@@ -31,6 +34,7 @@
   let timer = null;
   let outsideHandler = null;
   let keyHandler = null;
+  let composerObserver = null;
   let busy = false;
 
   // ── extension settings (sanctioned accessors, with a localStorage fallback) ─
@@ -223,6 +227,39 @@
     };
   }
 
+  // ── composer chip label ───────────────────────────────────────────────────
+
+  function usageLabel(payload) {
+    const plan = (payload && payload.go && payload.go.plan) || {};
+    if (!plan.available) return BUTTON_LABEL;
+    const windows = plan.windows || {};
+    const parts = PERCENT_ORDER.map((key) => {
+      const entry = windows[key] || {};
+      const percent = Number(entry.percent);
+      return Number.isFinite(percent) ? String(percent) + '%' : '—';
+    });
+    return 'Go: ' + parts.join('·');
+  }
+
+  function setButtonLabel(text) {
+    if (!button) return;
+    const label = button.querySelector('.hwx-ocu-btn-label');
+    if (label) label.textContent = text;
+    const live = text !== BUTTON_LABEL;
+    button.classList.toggle('hwx-ocu-btn--live', live);
+    button.title = live ? 'OpenCode Go usage — ' + text : 'OpenCode Go usage';
+    button.setAttribute('aria-label', live ? 'OpenCode Go usage: ' + text : 'OpenCode Go usage');
+  }
+
+  // Populate the chip on page load so the percentages are visible without
+  // opening the panel first. Any failure keeps the plain label.
+  async function refreshButtonLabel() {
+    try {
+      const res = await fetchJSON(BASE + '/api/usage');
+      if (res.ok && res.body) setButtonLabel(usageLabel(res.body));
+    } catch (_) { /* keep the plain label */ }
+  }
+
   // ── rendering ─────────────────────────────────────────────────────────────
 
   function sectionBlock(title, sub) {
@@ -280,7 +317,7 @@
     if (plan.available) {
       badge.textContent = 'live';
       badge.className = badgeClass('ok');
-      const order = ['rolling', 'weekly', 'monthly'];
+      const order = PERCENT_ORDER;
       order.forEach((key) => {
         const window = (plan.windows || {})[key];
         if (!window) return;
@@ -358,6 +395,7 @@
     try {
       const res = await fetchJSON(BASE + '/api/usage' + (force ? '?refresh=1' : ''));
       if (res.ok && res.body) {
+        setButtonLabel(usageLabel(res.body));
         render(res.body, null);
       } else {
         const record = await sidecarRecord();
@@ -410,7 +448,7 @@
     node.setAttribute('aria-label', 'OpenCode Go usage');
 
     const head = el('div', 'hwx-ocu-head');
-    head.appendChild(el('span', 'hwx-ocu-head-title', 'OpenCode'));
+    head.appendChild(el('span', 'hwx-ocu-head-title', 'OpenCode Go'));
     head.appendChild(el('span', 'hwx-ocu-stamp', ''));
 
     const refreshBtn = el('button', 'hwx-ocu-icon-btn hwx-ocu-refresh', '⟳');
@@ -436,17 +474,30 @@
     return node;
   }
 
+  // Anchor the popover above the composer chip: bottom-aligned to the chip's
+  // top edge, horizontally clamped so it stays inside the viewport.
+  function placePanel() {
+    if (!panel || !button) return;
+    const anchor = button.getBoundingClientRect();
+    const width = panel.offsetWidth || 380;
+    let left = anchor.right - width;
+    if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+    if (left < 8) left = 8;
+    const bottom = Math.max(8, window.innerHeight - anchor.top + 8);
+    panel.style.left = left + 'px';
+    panel.style.right = 'auto';
+    panel.style.bottom = bottom + 'px';
+    panel.style.top = 'auto';
+    panel.style.maxHeight = Math.max(180, Math.min(620, window.innerHeight - bottom - 8)) + 'px';
+  }
+
   function openPanel() {
     if (panel) { closePanel(); return; }
     lastFocus = document.activeElement;
     panel = buildPanel();
     panel.style.visibility = 'hidden';
     document.body.appendChild(panel);
-    // Clamp to the viewport once the panel has real dimensions.
-    const rect = panel.getBoundingClientRect();
-    if (rect.right > window.innerWidth - 4) {
-      panel.style.right = '8px';
-    }
+    placePanel();
     panel.style.visibility = '';
     if (button) button.setAttribute('aria-expanded', 'true');
 
@@ -482,10 +533,7 @@
     node.setAttribute('aria-label', 'OpenCode Go usage');
     node.setAttribute('aria-expanded', 'false');
     node.setAttribute('aria-haspopup', 'dialog');
-    node.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
-      + ' stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-      + '<path d="M3 12a9 9 0 1 0 9-9"/><path d="M12 12l4.5-4.5"/><circle cx="12" cy="12" r="1.6"/></svg>'
-      + '<span class="hwx-ocu-btn-label">OpenCode</span>';
+    node.appendChild(el('span', 'hwx-ocu-btn-label', BUTTON_LABEL));
     node.addEventListener('click', (event) => {
       event.stopPropagation();
       openPanel();
@@ -495,22 +543,38 @@
 
   function mount() {
     if (button && document.body.contains(button)) return true;
-    const titlebar = document.querySelector('.app-titlebar');
-    if (!titlebar) return false;
-    button = buildButton();
-    // Last flex child of the titlebar; margin-left: auto pins it to the far
-    // right corner even when the core titlebar spacer is hidden.
-    titlebar.appendChild(button);
+    const divider = document.querySelector('.composer-footer .composer-divider');
+    if (!divider || !divider.parentNode) return false;
+    if (!button) button = buildButton();
+    // Chip in .composer-left, right after the divider.
+    const next = divider.nextSibling;
+    if (next) divider.parentNode.insertBefore(button, next);
+    else divider.parentNode.appendChild(button);
+    watchComposer();
+    refreshButtonLabel();
     return true;
+  }
+
+  // The composer footer is static markup, but a panel switch can re-create it;
+  // re-insert the chip if it ever leaves the DOM. The observer is scoped to one
+  // node and re-checks containment, so our own insert cannot loop.
+  function watchComposer() {
+    if (composerObserver) return;
+    const footer = document.querySelector('.composer-footer');
+    if (!footer) return;
+    composerObserver = new MutationObserver(() => {
+      if (button && !document.body.contains(button)) mount();
+    });
+    composerObserver.observe(footer, { childList: true });
   }
 
   function mountWithRetry(attempt) {
     if (mount()) return;
-    if (attempt >= TITLEBAR_MAX_TRIES) {
-      console.warn('[' + EXT + '] app titlebar not found; extension not mounted');
+    if (attempt >= MOUNT_MAX_TRIES) {
+      console.warn('[' + EXT + '] composer footer not found; extension not mounted');
       return;
     }
-    window.setTimeout(() => mountWithRetry(attempt + 1), TITLEBAR_RETRY_MS);
+    window.setTimeout(() => mountWithRetry(attempt + 1), MOUNT_RETRY_MS);
   }
 
   if (document.readyState === 'loading') {

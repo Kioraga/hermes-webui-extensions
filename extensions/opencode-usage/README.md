@@ -1,23 +1,29 @@
-# OpenCode Usage
+# OpenCode Go Usage
 
-**OpenCode Usage** is a trusted local Hermes WebUI extension that adds a titlebar
-button (top-right corner) opening a panel with the **OpenCode Go plan usage**: the
-plan's own live windows — rolling 5 h, weekly and monthly — as percentages with
-their reset times, straight from OpenCode's usage endpoint.
+**OpenCode Go Usage** is a trusted local Hermes WebUI extension that adds a chip to
+the composer footer (right after the composer divider) opening a panel with the
+**OpenCode Go plan usage**: the plan's own live windows — rolling 5 h, weekly and
+monthly — as percentages with their reset times, straight from OpenCode's usage
+endpoint. Once data arrives the chip itself shows those three percentages as
+`Go: x%·y%·z%`.
 
 ## What It Does
 
-- Adds an **OpenCode** button to the far right of the app titlebar that toggles a
-  panel. `Escape`, the close button, or a click outside dismisses it.
+- Adds an **OpenCode Go** chip to the composer footer, right after
+  `.composer-divider`. Clicking it toggles the usage panel; `Escape`, the close
+  button, or a click outside dismisses it.
+- As soon as usage is fetched the chip label becomes the three plan percentages,
+  e.g. `Go: 11%·4%·23%` (rolling · weekly · monthly). Without data (sidecar down,
+  no key) it stays `OpenCode Go`.
 - Shows one bar per plan window (rolling 5 h / weekly / monthly) with the percent,
   the window status, and a live "resets in …" countdown derived from OpenCode's
   `resetsAt`.
-- A one-line summary below also reports the matching usage Hermes itself recorded
-  for Go-billed models (requests, tokens, list-price value). This is
-  informational — Go is a flat $10/month subscription, so it is the *list-price
-  value* of what the plan carried, not something billed on top.
-- Configurable in **Settings → Extensions → OpenCode Usage**: auto-refresh on/off
-  and the refresh interval.
+- A one-line summary below also reports the usage Hermes itself recorded for
+  Go-billed models (requests, tokens, list-price value). This is informational —
+  Go is a flat $10/month subscription, so it is the *list-price value* of what the
+  plan carried, not something billed on top.
+- Configurable in **Settings → Extensions → OpenCode Go Usage**: auto-refresh
+  on/off and the refresh interval.
 
 ## Data source
 
@@ -37,7 +43,7 @@ plan's own reset-anchored window.
 ```text
 Hermes WebUI page
   -> manifest-bundled extension assets (/extensions/opencode-usage/assets/*)
-  -> titlebar button -> panel
+  -> composer chip (right after .composer-divider) -> panel
   -> same-origin sidecar proxy: /api/extensions/opencode-usage/sidecar/api/usage
   -> sidecar (127.0.0.1:17799, token-v1)
        -> GET opencode.ai/zen/go/v1/usage        (Go API key, live plan windows)
@@ -154,8 +160,9 @@ blame your credentials for an edge rejection.
 - **Loopback only.** Sidecars cannot work against a bridge-networked WebUI
   container: `127.0.0.1` is namespace-local, so core and sidecar must share a
   network namespace and the state dir.
-- The panel anchors to `.app-titlebar`; a core rename would require an update —
-  standard for a DOM-injection extension.
+- The chip mounts right after `.composer-divider` inside `.composer-left`; a core
+  rename of those would require an update — standard for a DOM-injection
+  extension.
 
 ## Compatibility
 
@@ -164,7 +171,8 @@ blame your credentials for an edge rejection.
   `/api/extensions/<id>/sidecar/…`
 - `extension-settings`: `HermesExtensionSettings.settingsForExtension(id)` with
   `settings_schema` + `permissions.storage.owned: true`
-- DOM integration point: `.app-titlebar`
+- DOM integration point: `.composer-footer` → `.composer-divider` (the chip is
+  inserted right after it, inside `.composer-left`)
 - WebUI API surface: `GET /api/extensions/status`
 
 ## Verification
@@ -189,8 +197,9 @@ curl -s http://127.0.0.1:17799/health                                          #
 
 Manual verification:
 
-- the titlebar shows an **OpenCode** button at the far right; clicking it opens the
-  panel and the Go bars match `GET opencode.ai/zen/go/v1/usage` for your key
+- the composer shows an **OpenCode Go** chip right after the divider, and its
+  label becomes `Go: x%·y%·z%` matching `GET opencode.ai/zen/go/v1/usage` for your
+  key; clicking it opens the panel
 - the percent bars and "resets in …" countdowns agree with the raw endpoint
 - with the sidecar stopped, the panel explains that the sidecar is not answering
   instead of showing empty bars
