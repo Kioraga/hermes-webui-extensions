@@ -461,7 +461,7 @@
     panel.style.right = 'auto';
     panel.style.bottom = bottom + 'px';
     panel.style.top = 'auto';
-    panel.style.maxHeight = Math.max(180, Math.min(620, window.innerHeight - bottom - 8)) + 'px';
+    // Height is fixed in CSS so the panel never resizes between states.
     panel.style.setProperty('--hwx-ocu-tail-x', String(Math.max(12, anchor.width / 2)) + 'px');
   }
 
