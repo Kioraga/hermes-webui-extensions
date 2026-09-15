@@ -37,9 +37,9 @@ verbatim — it is OpenCode's own accounting, no scraping.
 
 ```text
 Hermes WebUI page
-  -> manifest-bundled extension assets (/extensions/opencode-usage/assets/*)
+  -> manifest-bundled extension assets (/extensions/opencode-go-usage/assets/*)
   -> composer chip (right after .composer-divider) -> panel
-  -> same-origin sidecar proxy: /api/extensions/opencode-usage/sidecar/api/usage
+  -> same-origin sidecar proxy: /api/extensions/opencode-go-usage/sidecar/api/usage
   -> sidecar (127.0.0.1:17799, token-v1)
        -> GET opencode.ai/zen/go/v1/usage        (Go API key, live plan windows)
        -> ~/.hermes/.env                         (key, when not in the environment)
@@ -55,13 +55,13 @@ The browser never sees the API key; it lives in the sidecar process only.
 ## Install
 
 1. **Install the extension.** From the gallery (Settings → Extensions) or by
-   copying this directory to `~/.hermes/webui/extensions/opencode-usage/`.
+   copying this directory to `~/.hermes/webui/extensions/opencode-go-usage/`.
 2. **Start the sidecar.**
 
    ```bash
-   cp ~/.hermes/webui/extensions/opencode-usage/sidecar/opencode-usage-sidecar.service \
+   cp ~/.hermes/webui/extensions/opencode-go-usage/sidecar/opencode-go-usage-sidecar.service \
       ~/.config/systemd/user/
-   systemctl --user enable --now opencode-usage-sidecar
+   systemctl --user enable --now opencode-go-usage-sidecar
    curl -s http://127.0.0.1:17799/health
    ```
 
@@ -83,8 +83,8 @@ The browser never sees the API key; it lives in the sidecar process only.
 
 - Disable the extension: Settings → Extensions → toggle it off (or set
   `"enabled": false` in the manifest), then reload the WebUI.
-- Stop the sidecar: `systemctl --user disable --now opencode-usage-sidecar`.
-- Uninstall: remove `~/.hermes/webui/extensions/opencode-usage/`. Nothing is
+- Stop the sidecar: `systemctl --user disable --now opencode-go-usage-sidecar`.
+- Uninstall: remove `~/.hermes/webui/extensions/opencode-go-usage/`. Nothing is
   persisted outside it except the settings the browser stores for the extension id
   and the proxy token WebUI mints in `~/.hermes/webui/sidecar-auth/`.
 
@@ -92,17 +92,17 @@ The browser never sees the API key; it lives in the sidecar process only.
 
 This is trusted local code running with WebUI session authority.
 
-Browser assets (`assets/opencode-usage.js` / `.css`):
+Browser assets (`assets/opencode-go-usage.js` / `.css`):
 
-- create extension-owned DOM (a titlebar button and a `position: fixed` panel) and
+- create extension-owned DOM (a composer chip and a `position: fixed` panel) and
   never mutate core views;
 - call exactly two same-origin endpoints: `GET /api/extensions/status` (to explain
   a missing sidecar/proxy consent) and
-  `GET /api/extensions/opencode-usage/sidecar/api/usage`;
+  `GET /api/extensions/opencode-go-usage/sidecar/api/usage`;
 - contact **no** external origin — there is no third-party URL in the assets;
 - read/write a small set of preferences through the sanctioned
   `HermesExtensionSettings` accessors, with a namespaced `localStorage` fallback
-  (`hermes-ext-opencode-usage`) for older core;
+  (`hermes-ext-opencode-go-usage`) for older core;
 - never touch cookies, the clipboard, or the filesystem.
 
 Sidecar (`sidecar/`, testable in isolation):
@@ -134,7 +134,7 @@ token file or read your `.env` directly. Nothing here changes that.
 
 OpenCode's edge rejects requests from generic HTTP-library user agents
 (`URLError` → **HTTP 403, Cloudflare error 1010**). The sidecar therefore sends
-`hermes-webui-ext-opencode-usage/<version>` and a stable `x-opencode-session`
+`hermes-webui-ext-opencode-go-usage/<version>` and a stable `x-opencode-session`
 header, which is also what OpenCode's Go documentation asks coding-agent clients to
 send. A 403 is reported as `blocked`, not as an invalid key, so the panel does not
 blame your credentials for an edge rejection.
@@ -170,9 +170,9 @@ node scripts/validate-extensions.mjs
 node scripts/scan-extension-safety.mjs
 node scripts/sync-sidecar-base.mjs --check
 node scripts/check-sidecar-usage.mjs
-node --check extensions/opencode-usage/assets/opencode-usage.js
-python3 -m json.tool extensions/opencode-usage/extension.json
-python3 -m json.tool extensions/opencode-usage/manifest.json
+node --check extensions/opencode-go-usage/assets/opencode-go-usage.js
+python3 -m json.tool extensions/opencode-go-usage/extension.json
+python3 -m json.tool extensions/opencode-go-usage/manifest.json
 ```
 
 Sidecar route behaviour, with the service running:
@@ -194,4 +194,4 @@ Manual verification:
   instead of showing empty bars
 - with proxy consent revoked, the panel points at Settings → Extensions →
   Diagnostics
-- `Escape`, the ✕ button, and a click outside all dismiss the panel
+- `Escape`, clicking the chip again, and a click outside all dismiss the panel

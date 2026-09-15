@@ -1,14 +1,14 @@
 {
   "extensions": [
     {
-      "id": "opencode-usage",
+      "id": "opencode-go-usage",
       "name": "OpenCode Go Usage",
       "description": "OpenCode Go plan windows (rolling / weekly / monthly) in a composer chip + popover panel.",
       "scripts": [
-        "assets/opencode-usage.js"
+        "assets/opencode-go-usage.js"
       ],
       "stylesheets": [
-        "assets/opencode-usage.css"
+        "assets/opencode-go-usage.css"
       ],
       "permissions": {
         "storage": {

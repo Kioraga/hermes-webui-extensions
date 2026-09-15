@@ -12,17 +12,17 @@
   // chip again.
   //
   // All HTTP goes through the consented loopback-sidecar proxy at
-  // /api/extensions/opencode-usage/sidecar/… — the API key stays in the sidecar
+  // /api/extensions/opencode-go-usage/sidecar/… — the API key stays in the sidecar
   // process and never reaches the browser. This file makes no other network call
   // and contacts no external origin.
 
-  const EXT = 'opencode-usage';
+  const EXT = 'opencode-go-usage';
   if (window.__hermesOpenCodeUsageLoaded) return;
   window.__hermesOpenCodeUsageLoaded = true;
 
   const BASE = '/api/extensions/' + EXT + '/sidecar';
   const STATUS_URL = '/api/extensions/status';
-  const FALLBACK_KEY = 'hermes-ext-opencode-usage';
+  const FALLBACK_KEY = 'hermes-ext-opencode-go-usage';
   const DEFAULTS = { auto_refresh: true, refresh_seconds: 60 };
   const WINDOW_LABELS = { rolling: '5-hour Usage', weekly: 'Weekly Usage', monthly: 'Monthly Usage' };
   const PERCENT_ORDER = ['rolling', 'weekly', 'monthly'];
@@ -191,13 +191,13 @@
         title: 'Sidecar rejected the proxy token',
         detail: 'The sidecar is running but is not reading the same token as WebUI (or the '
           + 'token file does not exist yet). Make sure the sidecar and WebUI share the same '
-          + 'state dir (~/.hermes/webui) and restart opencode-usage-sidecar.',
+          + 'state dir (~/.hermes/webui) and restart opencode-go-usage-sidecar.',
       };
     }
     if (status === 404) {
       return {
         title: 'Extension not enabled',
-        detail: 'The manifest does not declare the opencode-usage sidecar, or the extension '
+        detail: 'The manifest does not declare the opencode-go-usage sidecar, or the extension '
           + 'is disabled. Reload the WebUI and check Settings → Extensions.',
       };
     }
@@ -206,7 +206,7 @@
     return {
       title: 'Sidecar is not responding',
       detail: 'The proxy could not reach 127.0.0.1:17799. Start the sidecar service '
-        + '(`systemctl --user enable --now opencode-usage-sidecar`) and try again. '
+        + '(`systemctl --user enable --now opencode-go-usage-sidecar`) and try again. '
         + (status ? 'The proxy returned HTTP ' + status + '.' : ''),
     };
   }

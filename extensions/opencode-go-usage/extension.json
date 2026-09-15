@@ -1,15 +1,15 @@
 {
-  "id": "opencode-usage",
+  "id": "opencode-go-usage",
   "name": "OpenCode Go Usage",
   "description": "Titlebar panel showing OpenCode Go plan usage: rolling / weekly / monthly windows straight from OpenCode's own usage endpoint, via a loopback sidecar that keeps the API key out of the browser.",
   "version": "0.1.0",
   "author": "kioraga",
   "assets": {
     "scripts": [
-      "assets/opencode-usage.js"
+      "assets/opencode-go-usage.js"
     ],
     "stylesheets": [
-      "assets/opencode-usage.css"
+      "assets/opencode-go-usage.css"
     ]
   },
   "capabilities": [
@@ -32,7 +32,7 @@
     "webui_api": {
       "read": [
         "/api/extensions/status",
-        "/api/extensions/opencode-usage/sidecar/api/usage"
+        "/api/extensions/opencode-go-usage/sidecar/api/usage"
       ],
       "write": []
     },

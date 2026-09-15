@@ -1,4 +1,4 @@
-"""OpenCode Go usage collector for the opencode-usage sidecar.
+"""OpenCode Go usage collector for the opencode-go-usage sidecar.
 
 The Go plan windows.
 
@@ -39,8 +39,8 @@ _MAX_MODEL_ROWS = 40
 # (Cloudflare error 1010 / HTTP 403), and its Go docs ask clients to identify
 # themselves and to send a stable session id for routing + prompt-cache
 # optimization. Both are required for /usage to return 200 at all.
-_USER_AGENT = "hermes-webui-ext-opencode-usage/0.1.0"
-_SESSION_ID = f"opencode-usage-sidecar-{uuid.uuid4()}"
+_USER_AGENT = "hermes-webui-ext-opencode-go-usage/0.1.0"
+_SESSION_ID = f"opencode-go-usage-sidecar-{uuid.uuid4()}"
 
 # Windows as (key, label, seconds). Trailing windows for local accounting.
 _WINDOWS: Tuple[Tuple[str, str, int], ...] = (

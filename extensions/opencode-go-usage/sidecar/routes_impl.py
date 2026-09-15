@@ -1,4 +1,4 @@
-"""Route implementations for the opencode-usage sidecar (token-v1 scaffold).
+"""Route implementations for the opencode-go-usage sidecar (token-v1 scaffold).
 
 Every route here runs behind the scaffold's deny-by-default token guard
 (``sidecar_base.py``); ``/health`` (scaffold-owned) is the only tokenless route.
