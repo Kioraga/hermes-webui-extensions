@@ -1,0 +1,60 @@
+{
+  "extensions": [
+    {
+      "id": "opencode-usage",
+      "name": "OpenCode Usage",
+      "description": "OpenCode Go plan windows + locally measured OpenCode Zen consumption in a titlebar panel.",
+      "scripts": [
+        "assets/opencode-usage.js"
+      ],
+      "stylesheets": [
+        "assets/opencode-usage.css"
+      ],
+      "permissions": {
+        "storage": {
+          "owned": true
+        }
+      },
+      "settings_schema": [
+        {
+          "key": "auto_refresh",
+          "type": "boolean",
+          "label": "Refresh automatically while the panel is open",
+          "default": true
+        },
+        {
+          "key": "refresh_seconds",
+          "type": "integer",
+          "label": "Refresh interval (seconds)",
+          "default": 60
+        },
+        {
+          "key": "default_window",
+          "type": "enum",
+          "label": "Open on this usage window",
+          "options": [
+            {
+              "value": "rolling",
+              "label": "5 hours (rolling)"
+            },
+            {
+              "value": "weekly",
+              "label": "7 days"
+            },
+            {
+              "value": "monthly",
+              "label": "30 days"
+            }
+          ],
+          "default": "rolling"
+        }
+      ],
+      "sidecar": {
+        "type": "loopback",
+        "origin": "http://127.0.0.1:17799",
+        "health_path": "/health",
+        "proxy_auth": "token-v1"
+      }
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "id": "opencode-usage",
+  "name": "OpenCode Usage",
+  "description": "Titlebar panel showing OpenCode Go plan usage (rolling / weekly / monthly windows straight from OpenCode's own usage endpoint) and locally measured OpenCode Zen consumption, via a loopback sidecar that keeps the API keys out of the browser.",
+  "version": "0.1.0",
+  "author": "kioraga",
+  "assets": {
+    "scripts": [
+      "assets/opencode-usage.js"
+    ],
+    "stylesheets": [
+      "assets/opencode-usage.css"
+    ]
+  },
+  "capabilities": [
+    "manifest-bundle",
+    "loopback-sidecar"
+  ],
+  "lifecycle": {
+    "webui_restart_required": false,
+    "sidecar_start_required": true,
+    "native_host_start_required": false,
+    "native_host_autostart": "none"
+  },
+  "post_install": {
+    "requires_local_app": true,
+    "local_app_label": "OpenCode Usage sidecar",
+    "summary": "Run the bundled sidecar (sidecar/sidecar.py) on 127.0.0.1:17799, then approve the sidecar proxy in Settings \u2192 Extensions. The sidecar reads OPENCODE_GO_API_KEY / OPENCODE_ZEN_API_KEY from its environment or ~/.hermes/.env. WebUI authentication must be enabled for the token-v1 proxy to work at all."
+  },
+  "screenshots": [],
+  "permissions": {
+    "webui_api": {
+      "read": [
+        "/api/extensions/status",
+        "/api/extensions/opencode-usage/sidecar/api/usage"
+      ],
+      "write": []
+    },
+    "webui_navigation": false,
+    "dom": {
+      "owned": true,
+      "mutates_core_views": false
+    },
+    "storage": {
+      "owned": true,
+      "shared_webui_keys": []
+    },
+    "loopback_sidecar": true,
+    "native_host": false,
+    "filesystem": {
+      "arbitrary": false,
+      "serves_bundled_assets": true,
+      "note": "The browser assets read no files. The sidecar reads two local files read-only: the API keys from ~/.hermes/.env (when they are not in its environment) and Hermes' own state.db in SQLite mode=ro to aggregate recorded usage. Nothing is written."
+    },
+    "network_external": true,
+    "network_external_note": "The sidecar makes one outbound GET to OpenCode's documented usage endpoint (opencode.ai/zen/go/v1/usage) with the Go API key. The browser extension assets contact no external origin; they only call the same-origin sidecar proxy."
+  },
+  "settings_schema": [
+    {
+      "key": "auto_refresh",
+      "type": "boolean",
+      "label": "Refresh automatically while the panel is open",
+      "default": true
+    },
+    {
+      "key": "refresh_seconds",
+      "type": "integer",
+      "label": "Refresh interval (seconds)",
+      "default": 60
+    },
+    {
+      "key": "default_window",
+      "type": "enum",
+      "label": "Open on this usage window",
+      "options": [
+        {
+          "value": "rolling",
+          "label": "5 hours (rolling)"
+        },
+        {
+          "value": "weekly",
+          "label": "7 days"
+        },
+        {
+          "value": "monthly",
+          "label": "30 days"
+        }
+      ],
+      "default": "rolling"
+    }
+  ],
+  "sidecar": {
+    "type": "loopback",
+    "origin": "http://127.0.0.1:17799",
+    "health_path": "/health",
+    "proxy_auth": "token-v1",
+    "runtime": {
+      "kind": "vendored",
+      "path": "sidecar"
+    }
+  }
+}

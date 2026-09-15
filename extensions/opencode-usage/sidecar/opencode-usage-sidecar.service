@@ -1,0 +1,19 @@
+# opencode-usage sidecar — token-v1 loopback backend for the opencode-usage WebUI extension.
+# Serves OpenCode Go plan windows (live) and locally measured OpenCode Zen usage.
+# WebUI provisions the proxy token in the state dir; the scaffold resolves it.
+# No token — and no API key — in this unit. The keys are read from the sidecar's
+# environment or ~/.hermes/.env at request time.
+# Install: cp to ~/.config/systemd/user/ then `systemctl --user enable --now opencode-usage-sidecar`
+[Unit]
+Description=opencode-usage sidecar (OpenCode Go/Zen usage backend for the opencode-usage WebUI extension, token-v1)
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.hermes/webui/extensions/opencode-usage/sidecar
+Environment=HERMES_WEBUI_STATE_DIR=%h/.hermes/webui
+ExecStart=/usr/bin/python3 -S -u sidecar.py
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
