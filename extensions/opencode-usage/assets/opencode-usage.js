@@ -27,14 +27,19 @@
   const BUTTON_LABEL = 'OpenCode Go';
   const MOUNT_RETRY_MS = 400;
   const MOUNT_MAX_TRIES = 25;
+  const HOVER_OPEN_DELAY = 160;
+  const HOVER_CLOSE_DELAY = 260;
 
   let panel = null;
   let button = null;
+  let headBadge = null;
   let lastFocus = null;
   let timer = null;
   let outsideHandler = null;
   let keyHandler = null;
   let composerObserver = null;
+  let hoverOpenTimer = null;
+  let hoverCloseTimer = null;
   let busy = false;
 
   // ── extension settings (sanctioned accessors, with a localStorage fallback) ─
@@ -160,10 +165,16 @@
   }
 
   function badgeClass(kind) {
-    if (kind === 'err') return 'hwx-ocu-badge hwx-ocu-badge--err';
-    if (kind === 'warn') return 'hwx-ocu-badge hwx-ocu-badge--warn';
-    if (kind === 'ok') return 'hwx-ocu-badge hwx-ocu-badge--ok';
-    return 'hwx-ocu-badge';
+    if (kind === 'err') return 'hwx-ocu-badge hwx-ocu-badge--err hwx-ocu-head-badge';
+    if (kind === 'warn') return 'hwx-ocu-badge hwx-ocu-badge--warn hwx-ocu-head-badge';
+    if (kind === 'ok') return 'hwx-ocu-badge hwx-ocu-badge--ok hwx-ocu-head-badge';
+    return 'hwx-ocu-badge hwx-ocu-head-badge';
+  }
+
+  function setHeaderBadge(text, kind) {
+    if (!headBadge) return;
+    headBadge.textContent = text;
+    headBadge.className = badgeClass(kind);
   }
 
   // ── usage fetch + diagnostics ──────────────────────────────────────────────
@@ -199,7 +210,7 @@
       return {
         title: 'Sidecar proxy not approved yet',
         detail: 'Approve it in Settings → Extensions → Diagnostics → "Loopback sidecar" '
-          + 'card → "Approve proxy consent" for OpenCode Usage.',
+          + 'card → "Approve proxy consent" for OpenCode Go Usage.',
       };
     }
     if (status === 401 || status === 503) {
@@ -262,17 +273,6 @@
 
   // ── rendering ─────────────────────────────────────────────────────────────
 
-  function sectionBlock(title, sub) {
-    const section = el('section', 'hwx-ocu-section');
-    const head = el('div', 'hwx-ocu-section-head');
-    head.appendChild(el('span', 'hwx-ocu-section-title', title));
-    if (sub) head.appendChild(el('span', 'hwx-ocu-section-sub', sub));
-    section.appendChild(head);
-    const badge = el('span', 'hwx-ocu-badge');
-    head.appendChild(badge);
-    return { section, badge };
-  }
-
   function windowBar(key, percent, status, resetsAt) {
     const row = el('div', 'hwx-ocu-window');
     const top = el('div', 'hwx-ocu-window-top');
@@ -309,24 +309,19 @@
     return line;
   }
 
+  // The panel header already carries the "OpenCode Go" title and the status
+  // badge, so the body only holds the window bars (+ any error text).
   function renderGo(body, payload) {
     const go = (payload && payload.go) || {};
     const plan = go.plan || {};
-    const { section, badge } = sectionBlock('OpenCode Go', 'subscription plan');
 
     if (plan.available) {
-      badge.textContent = 'live';
-      badge.className = badgeClass('ok');
-      const order = PERCENT_ORDER;
-      order.forEach((key) => {
+      setHeaderBadge('live', 'ok');
+      PERCENT_ORDER.forEach((key) => {
         const window = (plan.windows || {})[key];
         if (!window) return;
-        section.appendChild(windowBar(key, window.percent, window.status, window.resets_at));
+        body.appendChild(windowBar(key, window.percent, window.status, window.resets_at));
       });
-      const stale = plan.cached ? ' · cached' : '';
-      section.appendChild(el('div', 'hwx-ocu-section-sub',
-        'Plan usage as reported by OpenCode' + stale
-        + (plan.fetched_at ? ' · fetched ' + fmtClock(plan.fetched_at) : '')));
     } else {
       const error = String(plan.error || 'unknown');
       const messages = {
@@ -336,45 +331,39 @@
         blocked: 'OpenCode\u2019s edge blocked the request (HTTP 403).',
         unreachable: 'OpenCode could not be reached from the sidecar.',
       };
-      badge.textContent = error === 'no_key' ? 'no key' : 'unavailable';
-      badge.className = badgeClass(error === 'no_key' ? 'warn' : 'err');
-      const note = el('p', 'hwx-ocu-note',
-        messages[error] || ('The quota lookup failed (' + error + ').'));
-      section.appendChild(note);
+      setHeaderBadge(error === 'no_key' ? 'no key' : 'unavailable', error === 'no_key' ? 'warn' : 'err');
+      body.appendChild(el('p', 'hwx-ocu-note',
+        messages[error] || ('The quota lookup failed (' + error + ').')));
     }
 
     const summary = localSummary(go.local, 'rolling');
-    if (summary) section.appendChild(summary);
-    body.appendChild(section);
+    if (summary) body.appendChild(summary);
   }
 
-  function renderMessage(body, title, detail) {
+  function renderError(body, title, detail) {
+    setHeaderBadge('unavailable', 'err');
     const section = el('section', 'hwx-ocu-section');
-    const { badge } = sectionBlock(title, '');
-    badge.textContent = 'unavailable';
-    badge.className = badgeClass('err');
-    section.appendChild(el('p', 'hwx-ocu-note', detail || ''));
+    section.appendChild(el('div', 'hwx-ocu-error-title', title));
+    if (detail) section.appendChild(el('p', 'hwx-ocu-note', detail));
     body.appendChild(section);
   }
 
   function render(payload, errorState) {
     if (!panel) return;
     const body = panel.querySelector('.hwx-ocu-body');
-    const stamp = panel.querySelector('.hwx-ocu-stamp');
     if (!body) return;
     body.textContent = '';
 
     if (errorState) {
-      renderMessage(body, errorState.title, errorState.detail);
+      renderError(body, errorState.title, errorState.detail);
     } else {
       renderGo(body, payload);
     }
 
+    const stamp = panel.querySelector('.hwx-ocu-stamp');
     if (stamp) {
       const generated = payload && payload.generated_at;
-      stamp.textContent = errorState
-        ? 'no data'
-        : (generated ? 'updated ' + fmtClock(generated) : '');
+      stamp.textContent = (errorState || !generated) ? '' : 'updated ' + fmtClock(generated);
     }
   }
 
@@ -428,13 +417,18 @@
   }
 
   function closePanel() {
+    cancelHoverTimers();
     stopRefresh();
-    if (outsideHandler) document.removeEventListener('mousedown', outsideHandler, true);
+    if (outsideHandler) {
+      document.removeEventListener('mousedown', outsideHandler, true);
+      document.removeEventListener('click', outsideHandler, true);
+    }
     if (keyHandler) document.removeEventListener('keydown', keyHandler, true);
     outsideHandler = null;
     keyHandler = null;
     if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
     panel = null;
+    headBadge = null;
     if (button) {
       button.setAttribute('aria-expanded', 'false');
       button.focus();
@@ -442,13 +436,53 @@
     lastFocus = null;
   }
 
+  // ── hover behaviour (mirrors the core context-window indicator) ───────────
+  // Hovering the chip opens the panel after a short delay; moving away schedules
+  // a close with a grace period so the cursor can reach the panel. The panel
+  // absorbs that pending close while hovered. Clicking still toggles (touch and
+  // keyboard fallback).
+
+  function cancelHoverTimers() {
+    if (hoverOpenTimer) { window.clearTimeout(hoverOpenTimer); hoverOpenTimer = null; }
+    if (hoverCloseTimer) { window.clearTimeout(hoverCloseTimer); hoverCloseTimer = null; }
+  }
+
+  function hoverOpen() {
+    if (panel) { cancelHoverTimers(); return; }
+    if (hoverCloseTimer) { window.clearTimeout(hoverCloseTimer); hoverCloseTimer = null; }
+    if (hoverOpenTimer) return;
+    hoverOpenTimer = window.setTimeout(() => {
+      hoverOpenTimer = null;
+      openPanel();
+    }, HOVER_OPEN_DELAY);
+  }
+
+  function hoverLeave() {
+    if (!panel) {
+      if (hoverOpenTimer) { window.clearTimeout(hoverOpenTimer); hoverOpenTimer = null; }
+      return;
+    }
+    if (hoverCloseTimer) return;
+    hoverCloseTimer = window.setTimeout(() => {
+      hoverCloseTimer = null;
+      closePanel();
+    }, HOVER_CLOSE_DELAY);
+  }
+
   function buildPanel() {
     const node = el('aside', 'hwx-ocu-panel');
     node.setAttribute('role', 'dialog');
     node.setAttribute('aria-label', 'OpenCode Go usage');
+    // Keep the panel open while the cursor is on it (it has a refresh button).
+    node.addEventListener('mouseenter', () => {
+      if (hoverCloseTimer) { window.clearTimeout(hoverCloseTimer); hoverCloseTimer = null; }
+    });
+    node.addEventListener('mouseleave', hoverLeave);
 
     const head = el('div', 'hwx-ocu-head');
     head.appendChild(el('span', 'hwx-ocu-head-title', 'OpenCode Go'));
+    headBadge = el('span', 'hwx-ocu-badge hwx-ocu-head-badge');
+    head.appendChild(headBadge);
     head.appendChild(el('span', 'hwx-ocu-stamp', ''));
 
     const refreshBtn = el('button', 'hwx-ocu-icon-btn hwx-ocu-refresh', '⟳');
@@ -467,24 +501,18 @@
 
     node.appendChild(head);
     node.appendChild(el('div', 'hwx-ocu-body', ''));
-
-    const foot = el('div', 'hwx-ocu-foot',
-      'OpenCode Go plan usage · queried from OpenCode.');
-    node.appendChild(foot);
     return node;
   }
 
-  // Anchor the popover above the chip and right-align it with the composer, the
-  // way core's own composer dropdowns sit, then clamp it into the viewport.
+  // Anchor the popover above the chip, right edges flush (the panel grows
+  // leftwards from the chip), then clamp it into the viewport.
   function placePanel() {
     if (!panel || !button) return;
     const anchor = button.getBoundingClientRect();
-    const box = document.querySelector('.composer-box');
-    const rightEdge = box ? box.getBoundingClientRect().right : (window.innerWidth - 12);
     const width = panel.offsetWidth || 360;
-    let left = rightEdge - width;
-    if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+    let left = anchor.right - width;
     if (left < 8) left = 8;
+    if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
     const bottom = Math.max(8, window.innerHeight - anchor.top + 8);
     panel.style.left = left + 'px';
     panel.style.right = 'auto';
@@ -509,6 +537,9 @@
         closePanel();
       }
     };
+    // Composer-tool behaviour: pressing any other control (or clicking anywhere
+    // outside) dismisses the popover. Capture phase, so core's own handlers
+    // cannot keep it open.
     outsideHandler = (event) => {
       if (!panel) return;
       if (panel.contains(event.target)) return;
@@ -517,6 +548,7 @@
     };
     document.addEventListener('keydown', keyHandler, true);
     document.addEventListener('mousedown', outsideHandler, true);
+    document.addEventListener('click', outsideHandler, true);
 
     const closeBtn = panel.querySelector('.hwx-ocu-close');
     if (closeBtn) closeBtn.focus();
@@ -525,7 +557,7 @@
     scheduleRefresh();
   }
 
-  // ── titlebar button ───────────────────────────────────────────────────────
+  // ── composer chip ─────────────────────────────────────────────────────────
 
   function buildButton() {
     const node = el('button', 'hwx-ocu-btn');
@@ -538,8 +570,10 @@
     node.appendChild(el('span', 'hwx-ocu-btn-label', BUTTON_LABEL));
     node.addEventListener('click', (event) => {
       event.stopPropagation();
-      openPanel();
+      openPanel(); // toggles; touch / click fallback, like the context indicator
     });
+    node.addEventListener('mouseenter', hoverOpen);
+    node.addEventListener('mouseleave', hoverLeave);
     return node;
   }
 

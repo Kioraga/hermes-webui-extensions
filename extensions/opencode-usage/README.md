@@ -10,8 +10,11 @@ endpoint. Once data arrives the chip itself shows those three percentages as
 ## What It Does
 
 - Adds an **OpenCode Go** chip to the composer footer, right after
-  `.composer-divider`. Clicking it toggles the usage panel; `Escape`, the close
-  button, or a click outside dismisses it.
+  `.composer-divider`. It behaves like the core context-window indicator:
+  hovering the chip opens the panel (after a short delay) and moving away closes
+  it, with a grace period so the cursor can reach the panel; the panel stays open
+  while hovered. Clicking the chip still toggles the panel (touch/keyboard
+  fallback), and `Escape` / clicking outside dismisses it.
 - As soon as usage is fetched the chip label becomes the three plan percentages,
   e.g. `Go: 11%·4%·23%` (rolling · weekly · monthly). Without data (sidecar down,
   no key) it stays `OpenCode Go`.
@@ -200,9 +203,9 @@ curl -s http://127.0.0.1:17799/health                                          #
 
 Manual verification:
 
-- the composer shows an **OpenCode Go** chip right after the divider, and its
-  label becomes `Go: x%·y%·z%` matching `GET opencode.ai/zen/go/v1/usage` for your
-  key; clicking it opens the panel
+- hovering the composer's **OpenCode Go** chip opens the panel and its label
+  shows `Go: x%·y%·z%` matching `GET opencode.ai/zen/go/v1/usage` for your key;
+  moving the cursor away closes it
 - the percent bars and "resets in …" countdowns agree with the raw endpoint
 - with the sidecar stopped, the panel explains that the sidecar is not answering
   instead of showing empty bars
