@@ -353,7 +353,10 @@
     if (busy) return;
     busy = true;
     const refreshBtn = panel && panel.querySelector('.hwx-ocu-refresh');
-    if (refreshBtn) refreshBtn.disabled = true;
+    if (refreshBtn) {
+      refreshBtn.disabled = true;
+      refreshBtn.classList.add('hwx-ocu-refresh--active');
+    }
     // Never collapse already-rendered content on a refresh: keep showing the
     // last payload until the fresh one lands, so the panel keeps its size.
     if (!lastPayload) renderLoading();
@@ -371,7 +374,10 @@
       render(null, diagnose(0, await sidecarRecord()));
     } finally {
       busy = false;
-      if (refreshBtn) refreshBtn.disabled = false;
+      if (refreshBtn) {
+        refreshBtn.disabled = false;
+        refreshBtn.classList.remove('hwx-ocu-refresh--active');
+      }
     }
   }
 

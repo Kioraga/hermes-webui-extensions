@@ -88,6 +88,13 @@
   line-height: 1;
 }
 .hwx-ocu-icon-btn:hover { color: var(--text, #111); background: var(--hover-bg, rgba(127, 127, 127, .14)); }
+/* While load() is fetching, the refresh icon spins and turns accent-coloured
+   so there is visible feedback that the data is updating. */
+.hwx-ocu-icon-btn.hwx-ocu-refresh--active {
+  color: var(--accent, #3889fd);
+  animation: hwx-ocu-spin .9s linear infinite;
+}
+@keyframes hwx-ocu-spin { to { transform: rotate(360deg); } }
 
 .hwx-ocu-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 12px 14px; }
 .hwx-ocu-body p { margin: 0 0 8px; }
