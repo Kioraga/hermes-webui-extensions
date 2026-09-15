@@ -36,7 +36,8 @@
   /* left/bottom are computed at open time (placePanel): the panel grows to the
      RIGHT of the chip, and its bottom edge leaves room for the callout tail. */
   width: min(360px, calc(100vw - 24px));
-  height: min(70vh, 420px);  /* fixed size: identical while loading and loaded */
+  /* height is set by JS (measureAndFixHeight) to the tallest the content
+     occupies, so the panel keeps the same size while loading and loaded. */
   display: flex;
   flex-direction: column;
   /* Same surface as core's composer dropdowns (.composer-toolsets-dropdown,

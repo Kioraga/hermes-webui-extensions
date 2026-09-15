@@ -40,6 +40,8 @@
   let composerObserver = null;
   let hoverOpenTimer = null;
   let hoverCloseTimer = null;
+  let lastPayload = null;
+  let fixedPanelHeight = null;
   let busy = false;
 
   // ── extension settings (sanctioned accessors, with a localStorage fallback) ─
@@ -241,7 +243,10 @@
   async function refreshButtonLabel() {
     try {
       const res = await fetchJSON(BASE + '/api/usage');
-      if (res.ok && res.body) setButtonLabel(usageLabel(res.body));
+      if (res.ok && res.body) {
+        lastPayload = res.body;
+        setButtonLabel(usageLabel(res.body));
+      }
     } catch (_) { /* keep the plain label */ }
   }
 
@@ -301,6 +306,18 @@
     body.appendChild(section);
   }
 
+  // Size the panel to the tallest its content will ever be (the Go windows) and
+  // keep that height for every state (data / loading / error) so it never
+  // resizes. Measured once against the rendered data; the body scrolls inside.
+  function measureAndFixHeight() {
+    if (!panel || fixedPanelHeight !== null) return;
+    const bottom = window.parseInt(panel.style.bottom, 10) || 0;
+    const avail = Math.max(120, window.innerHeight - bottom - 8);
+    const natural = panel.offsetHeight || 200;
+    fixedPanelHeight = Math.max(120, Math.min(avail, natural));
+    panel.style.height = fixedPanelHeight + 'px';
+  }
+
   function render(payload, errorState) {
     if (!panel) return;
     const body = panel.querySelector('.hwx-ocu-body');
@@ -311,6 +328,7 @@
       renderError(body, errorState.title, errorState.detail);
     } else {
       renderGo(body, payload);
+      measureAndFixHeight();
     }
 
     const stamp = panel.querySelector('.hwx-ocu-stamp');
@@ -333,10 +351,11 @@
     busy = true;
     const refreshBtn = panel && panel.querySelector('.hwx-ocu-refresh');
     if (refreshBtn) refreshBtn.disabled = true;
-    renderLoading();
+    if (!lastPayload || force) renderLoading();
     try {
       const res = await fetchJSON(BASE + '/api/usage' + (force ? '?refresh=1' : ''));
       if (res.ok && res.body) {
+        lastPayload = res.body;
         setButtonLabel(usageLabel(res.body));
         render(res.body, null);
       } else {
@@ -472,6 +491,9 @@
     panel.style.visibility = 'hidden';
     document.body.appendChild(panel);
     placePanel();
+    // Render the freshest data we already have so the height is measured from
+    // the full content before the panel is shown; load(false) then refreshes it.
+    if (lastPayload) render(lastPayload, null); else renderLoading();
     panel.style.visibility = '';
 
     keyHandler = (event) => {
