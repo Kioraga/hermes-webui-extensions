@@ -8,7 +8,15 @@
   gap: 6px;
   height: 28px;
   padding: 0 8px;
-  margin-right: 4px;
+  /* The core titlebar is display:flex with justify-content:center (and its
+     spacer hidden above 900px), so an in-flow child lands next to the centred
+     session title. Anchor absolutely instead: no core layout is shifted, and
+     the button always sits in the top-right corner. */
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: max(12px, env(safe-area-inset-right, 0px));
+  flex-shrink: 0;
   border: none;
   border-radius: 6px;
   background: transparent;
@@ -16,6 +24,11 @@
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+}
+/* Below 901px the titlebar switches to space-between and the core New-chat /
+   Reload controls occupy the right edge: step left of them. */
+@media (max-width: 900px) {
+  .hwx-ocu-btn { right: 60px; }
 }
 .hwx-ocu-btn:hover,
 .hwx-ocu-btn[aria-expanded="true"] {
@@ -41,6 +54,10 @@
   color: var(--text, #111);
   box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
   font-size: 13px;
+}
+/* The core titlebar is taller (52px) on phone widths. */
+@media (max-width: 640px) {
+  .hwx-ocu-panel { top: 58px; }
 }
 
 .hwx-ocu-head {
@@ -105,36 +122,6 @@
 }
 .hwx-ocu-bar-fill--warn { background: var(--warn, #d08700); }
 .hwx-ocu-bar-fill--err { background: var(--danger, #c0392b); }
-
-.hwx-ocu-tabs { display: flex; gap: 4px; margin: 0 0 8px; }
-.hwx-ocu-tab {
-  border: 1px solid var(--border, rgba(127, 127, 127, .3));
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted, #888);
-  font: inherit;
-  font-size: 11px;
-  padding: 3px 9px;
-  cursor: pointer;
-}
-.hwx-ocu-tab[aria-pressed="true"] {
-  color: var(--text, #111);
-  background: var(--hover-bg, rgba(127, 127, 127, .16));
-}
-
-.hwx-ocu-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.hwx-ocu-table th {
-  text-align: right;
-  font-weight: 500;
-  color: var(--muted, #888);
-  padding: 2px 4px;
-  border-bottom: 1px solid var(--border, rgba(127, 127, 127, .22));
-}
-.hwx-ocu-table th:first-child, .hwx-ocu-table td:first-child { text-align: left; }
-.hwx-ocu-table td { padding: 3px 4px; text-align: right; font-variant-numeric: tabular-nums; }
-.hwx-ocu-table tr.hwx-ocu-total td { border-top: 1px solid var(--border, rgba(127, 127, 127, .22)); font-weight: 600; }
-.hwx-ocu-model { font-family: var(--code-font, ui-monospace, monospace); font-size: 11px; }
-.hwx-ocu-dim { color: var(--muted, #888); }
 
 .hwx-ocu-note {
   margin: 8px 0 0;

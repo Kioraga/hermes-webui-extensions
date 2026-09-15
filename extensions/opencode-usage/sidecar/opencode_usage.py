@@ -1,21 +1,12 @@
-"""OpenCode Go / Zen usage collector for the opencode-usage sidecar.
+"""OpenCode Go usage collector for the opencode-usage sidecar.
 
-Two sources, deliberately kept separate in the payload:
+The Go plan windows.
 
-* **Go (live plan windows).** ``GET https://opencode.ai/zen/go/v1/usage`` with the
-  Go API key returns plan-window percentages (rolling / weekly / monthly) plus
-  each window's ``resetsAt``. This is OpenCode's own accounting, so it is the
-  authoritative number for the $10/month plan.
+``GET https://opencode.ai/zen/go/v1/usage`` with the Go API key returns plan-window
+percentages (rolling / weekly / monthly) plus each window's ``resetsAt``. That is
+OpenCode's own accounting, so it is the authoritative number for the $10/month plan.
 
-* **Zen (local accounting only).** OpenCode exposes **no** balance/usage API for
-  Zen (see opencode#10448) — every candidate path 404s. So Zen is reported from
-  what Hermes itself recorded: the ``session_model_usage`` table in
-  ``state.db``, grouped by billing provider/base URL, priced with Zen's published
-  list prices to give an *estimate*. The extension must never present that
-  estimate as an account balance.
-
-Local-accounting approximation (documented in the README, surfaced in the
-payload): ``session_model_usage`` rows are cumulative per
+Local-accounting approximation: ``session_model_usage`` rows are cumulative per
 (session, model, provider, task) and carry only ``first_seen``/``last_seen`` —
 there is no per-request timestamp series. A row is therefore attributed to a
 window **whole** when its ``last_seen`` falls inside that window. Long sessions
@@ -58,14 +49,10 @@ _WINDOWS: Tuple[Tuple[str, str, int], ...] = (
     ("monthly", "30 d", 30 * 24 * 3600),
 )
 
-# Zen published list prices, USD per 1M tokens:
-# model id -> (input, output, cache_read, cache_write). Cache write omitted (0)
-# where OpenCode publishes "-". Models with a <=/> context-tier split use the
-# base tier; see PRICE_BASIS. Free models are 0.0.
-PRICE_BASIS = (
-    "Zen published list price (USD per 1M tokens), base context tier; "
-    "unknown model ids are excluded from the estimate"
-)
+# OpenCode list prices, USD per 1M tokens (used for the informational Go
+# list-price value): model id -> (input, output, cache_read, cache_write). Cache
+# write omitted (0) where OpenCode publishes "-". Models with a <=/> context-tier
+# split use the base tier. Free models are 0.0.
 ZEN_PRICES: Dict[str, Tuple[float, float, float, float]] = {
     # Free tier
     "big-pickle": (0.0, 0.0, 0.0, 0.0),
@@ -124,10 +111,9 @@ ZEN_PRICES: Dict[str, Tuple[float, float, float, float]] = {
     "gpt-5-nano": (0.05, 0.40, 0.005, 0.0),
 }
 
-# Key names, most specific first. OPENCODE_API_KEY is the legacy shared key that
-# Hermes treats as enabling both providers.
+# Key name for the Go plan lookup. OPENCODE_API_KEY is the legacy shared key that
+# Hermes treats as enabling OpenCode Go too.
 _GO_KEY_NAMES = ("OPENCODE_GO_API_KEY", "OPENCODE_API_KEY")
-_ZEN_KEY_NAMES = ("OPENCODE_ZEN_API_KEY", "OPENCODE_API_KEY")
 
 _plan_cache_lock = threading.Lock()
 _plan_cache: Dict[str, Any] = {"at": 0.0, "payload": None}
@@ -444,10 +430,8 @@ def local_usage(class_name: str, *, now: Optional[float] = None) -> Dict[str, An
 def build_payload(*, force: bool = False) -> Dict[str, Any]:
     dotenv = _read_dotenv()
     go_key, go_source = resolve_key(_GO_KEY_NAMES, dotenv)
-    zen_key, zen_source = resolve_key(_ZEN_KEY_NAMES, dotenv)
 
     go_local = local_usage("go")
-    zen_local = local_usage("zen")
 
     return {
         "ok": True,
@@ -461,22 +445,5 @@ def build_payload(*, force: bool = False) -> Dict[str, Any]:
             ),
             "plan": go_plan(go_key, force=force),
             "local": go_local,
-        },
-        "zen": {
-            "key_present": bool(zen_key),
-            "key_source": zen_source,
-            "api_available": False,
-            "api_note": (
-                "OpenCode publishes no Zen balance/usage API; the local figures below are "
-                "computed from Hermes' own recorded usage, not from the Zen account."
-            ),
-            "local": zen_local,
-            "estimate": {
-                "price_basis": PRICE_BASIS,
-                "priced_models": sorted(
-                    {m["model"] for m in zen_local.get("models", []) if m.get("priced")}
-                ),
-                "unpriced_models": zen_local.get("unpriced_models", []),
-            },
         },
     }

@@ -2,19 +2,15 @@
   'use strict';
 
   // ── OpenCode Usage extension for Hermes WebUI ────────────────────────────
-  // Adds a titlebar button that opens a panel with:
-  //   * OpenCode Go  — the plan's own live windows (rolling / weekly / monthly
-  //                    percent + reset time) straight from the sidecar, which
-  //                    calls OpenCode's documented /zen/go/v1/usage endpoint.
-  //   * OpenCode Zen — local accounting only. OpenCode exposes no Zen balance
-  //                    or usage API, so the sidecar aggregates the usage Hermes
-  //                    itself recorded (state.db → session_model_usage) and
-  //                    prices it with Zen's published list prices. Estimated,
-  //                    never presented as an account balance.
+  // Adds a titlebar button (top-right corner) that opens a panel with the
+  // OpenCode Go plan usage: the plan's own live windows (rolling / weekly /
+  // monthly percent + reset time) straight from the sidecar, which calls
+  // OpenCode's documented /zen/go/v1/usage endpoint. A one-line summary also
+  // shows the matching usage Hermes itself recorded for Go-billed models.
   //
   // All HTTP goes through the consented loopback-sidecar proxy at
-  // /api/extensions/opencode-usage/sidecar/… — the API keys stay in the sidecar
-  // process and never reach the browser. This file makes no other network call
+  // /api/extensions/opencode-usage/sidecar/… — the API key stays in the sidecar
+  // process and never reaches the browser. This file makes no other network call
   // and contacts no external origin.
 
   const EXT = 'opencode-usage';
@@ -24,7 +20,7 @@
   const BASE = '/api/extensions/' + EXT + '/sidecar';
   const STATUS_URL = '/api/extensions/status';
   const FALLBACK_KEY = 'hermes-ext-opencode-usage';
-  const DEFAULTS = { auto_refresh: true, refresh_seconds: 60, default_window: 'rolling' };
+  const DEFAULTS = { auto_refresh: true, refresh_seconds: 60 };
   const WINDOW_LABELS = { rolling: '5 h', weekly: '7 d', monthly: '30 d' };
   const TITLEBAR_RETRY_MS = 400;
   const TITLEBAR_MAX_TRIES = 25;
@@ -35,7 +31,6 @@
   let timer = null;
   let outsideHandler = null;
   let keyHandler = null;
-  let activeWindow = null;
   let busy = false;
 
   // ── extension settings (sanctioned accessors, with a localStorage fallback) ─
@@ -277,52 +272,6 @@
     return line;
   }
 
-  function modelsTable(local, windowKey) {
-    const byWindow = (local && local.by_window) || {};
-    const bucket = byWindow[windowKey] || {};
-    const models = Array.isArray(bucket.models) ? bucket.models : [];
-    if (!models.length) {
-      return el('div', 'hwx-ocu-empty', 'No activity for this provider recorded by Hermes in this window.');
-    }
-    const table = el('table', 'hwx-ocu-table');
-    const thead = el('thead');
-    const headRow = el('tr');
-    ['Model', 'Requests', 'Input', 'Output', 'Cache', '≈ Cost'].forEach((label) => {
-      headRow.appendChild(el('th', null, label));
-    });
-    thead.appendChild(headRow);
-    table.appendChild(thead);
-
-    const tbody = el('tbody');
-    let totalRequests = 0;
-    let totalCost = 0;
-    models.forEach((model) => {
-      const row = el('tr');
-      row.appendChild(el('td', 'hwx-ocu-model', model.model));
-      row.appendChild(el('td', null, fmtInt(model.requests)));
-      row.appendChild(el('td', null, fmtTokens(model.input_tokens)));
-      row.appendChild(el('td', null, fmtTokens(model.output_tokens)));
-      row.appendChild(el('td', 'hwx-ocu-dim', fmtTokens(model.cache_read_tokens)));
-      row.appendChild(el('td', null, model.priced === false
-        ? '—'
-        : fmtUsd(model.estimated_cost_usd)));
-      totalRequests += Number(model.requests || 0);
-      totalCost += Number(model.estimated_cost_usd || 0);
-      tbody.appendChild(row);
-    });
-    table.appendChild(tbody);
-
-    const totalRow = el('tr', 'hwx-ocu-total');
-    totalRow.appendChild(el('td', null, 'Total'));
-    totalRow.appendChild(el('td', null, fmtInt(totalRequests)));
-    totalRow.appendChild(el('td', null, ''));
-    totalRow.appendChild(el('td', null, ''));
-    totalRow.appendChild(el('td', null, ''));
-    totalRow.appendChild(el('td', null, fmtUsd(totalCost)));
-    tbody.appendChild(totalRow);
-    return table;
-  }
-
   function renderGo(body, payload) {
     const go = (payload && payload.go) || {};
     const plan = go.plan || {};
@@ -357,56 +306,8 @@
       section.appendChild(note);
     }
 
-    const summary = localSummary(go.local, activeWindow);
+    const summary = localSummary(go.local, 'rolling');
     if (summary) section.appendChild(summary);
-    body.appendChild(section);
-  }
-
-  function renderZen(body, payload, redraw) {
-    const zen = (payload && payload.zen) || {};
-    const local = zen.local || {};
-    const { section, badge } = sectionBlock('OpenCode Zen', 'pay-as-you-go');
-    badge.textContent = 'local';
-    badge.className = badgeClass('warn');
-
-    section.appendChild(el('p', 'hwx-ocu-note', zen.api_note
-      || 'OpenCode publishes no Zen balance API; these figures are the usage Hermes recorded, not an account balance.'));
-    section.appendChild(el('p', 'hwx-ocu-note',
-      'Measured locally from ~/.hermes/state.db (session_model_usage).'));
-
-    if (!local.available) {
-      section.appendChild(el('p', 'hwx-ocu-note',
-        'Could not read the local usage (' + String(local.error || 'error') + ').'));
-      body.appendChild(section);
-      return;
-    }
-
-    const tabs = el('div', 'hwx-ocu-tabs');
-    Object.keys(WINDOW_LABELS).forEach((key) => {
-      const tab = el('button', 'hwx-ocu-tab', WINDOW_LABELS[key]);
-      tab.type = 'button';
-      tab.setAttribute('aria-pressed', key === activeWindow ? 'true' : 'false');
-      tab.addEventListener('click', () => {
-        if (activeWindow === key) return;
-        activeWindow = key;
-        setSetting('default_window', key);
-        redraw();
-      });
-      tabs.appendChild(tab);
-    });
-    section.appendChild(tabs);
-
-    section.appendChild(modelsTable(local, activeWindow));
-
-    const unpriced = Array.isArray(zen.estimate && zen.estimate.unpriced_models)
-      ? zen.estimate.unpriced_models : [];
-    if (unpriced.length) {
-      section.appendChild(el('p', 'hwx-ocu-note',
-        'No published Zen price, excluded from the estimate: ' + unpriced.join(', ') + '.'));
-    }
-    const basis = zen.estimate && zen.estimate.price_basis;
-    if (basis) section.appendChild(el('p', 'hwx-ocu-note', 'Estimate: ' + basis + '.'));
-
     body.appendChild(section);
   }
 
@@ -426,12 +327,10 @@
     if (!body) return;
     body.textContent = '';
 
-    const redraw = () => render(payload, errorState);
     if (errorState) {
       renderMessage(body, errorState.title, errorState.detail);
     } else {
       renderGo(body, payload);
-      renderZen(body, payload, redraw);
     }
 
     if (stamp) {
@@ -508,7 +407,7 @@
   function buildPanel() {
     const node = el('aside', 'hwx-ocu-panel');
     node.setAttribute('role', 'dialog');
-    node.setAttribute('aria-label', 'OpenCode Go and Zen usage');
+    node.setAttribute('aria-label', 'OpenCode Go usage');
 
     const head = el('div', 'hwx-ocu-head');
     head.appendChild(el('span', 'hwx-ocu-head-title', 'OpenCode'));
@@ -532,7 +431,7 @@
     node.appendChild(el('div', 'hwx-ocu-body', ''));
 
     const foot = el('div', 'hwx-ocu-foot',
-      'Go: plan usage queried from OpenCode · Zen: usage recorded by Hermes (state.db), not an account balance.');
+      'OpenCode Go plan usage · queried from OpenCode.');
     node.appendChild(foot);
     return node;
   }
@@ -579,8 +478,8 @@
     const node = el('button', 'hwx-ocu-btn');
     node.type = 'button';
     node.id = 'btnOpenCodeUsage';
-    node.title = 'OpenCode Go and Zen usage';
-    node.setAttribute('aria-label', 'OpenCode Go and Zen usage');
+    node.title = 'OpenCode Go usage';
+    node.setAttribute('aria-label', 'OpenCode Go usage');
     node.setAttribute('aria-expanded', 'false');
     node.setAttribute('aria-haspopup', 'dialog');
     node.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
@@ -599,7 +498,8 @@
     const titlebar = document.querySelector('.app-titlebar');
     if (!titlebar) return false;
     button = buildButton();
-    // Rightmost corner of the titlebar: append after Reload.
+    // Last flex child of the titlebar; margin-left: auto pins it to the far
+    // right corner even when the core titlebar spacer is hidden.
     titlebar.appendChild(button);
     return true;
   }
