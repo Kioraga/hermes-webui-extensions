@@ -75,9 +75,10 @@ The browser never sees the API keys; they live in the sidecar process only.
    Any other way of running `sidecar/sidecar.py` works too, as long as
    `HERMES_WEBUI_STATE_DIR` points at the WebUI state dir so the sidecar finds the
    proxy token.
-3. **Approve the sidecar proxy** in **Settings → Extensions → Installed**
-   (OpenCode Usage → approve the sidecar proxy). This is what lets the browser
-   reach the sidecar through the WebUI instead of guessing a loopback port.
+3. **Approve the sidecar proxy** in **Settings → Extensions → Diagnostics → the
+   "Loopback sidecar" card → "Approve proxy consent"** for OpenCode Usage. This is
+   what lets the browser reach the sidecar through the WebUI instead of guessing a
+   loopback port.
 4. **Enable WebUI authentication** (Settings → Password) if it is off. The
    `token-v1` proxy is deliberately fail-closed without it, because an
    unauthenticated WebUI would otherwise act as a token-bearing forwarding oracle

@@ -145,9 +145,9 @@
     const days = Math.floor(minutes / 1440);
     const hours = Math.floor((minutes % 1440) / 60);
     const mins = minutes % 60;
-    if (days > 0) return 'se reinicia en ' + days + ' d ' + hours + ' h';
-    if (hours > 0) return 'se reinicia en ' + hours + ' h ' + mins + ' min';
-    return 'se reinicia en ' + mins + ' min';
+    if (days > 0) return 'resets in ' + days + ' d ' + hours + ' h';
+    if (hours > 0) return 'resets in ' + hours + ' h ' + mins + ' min';
+    return 'resets in ' + mins + ' min';
   }
 
   function pctClass(percent, status) {
@@ -191,40 +191,40 @@
     if (status === 403) {
       if (proxy.posture === 'local_unprotected') {
         return {
-          title: 'La WebUI no tiene autenticación activada',
-          detail: 'El proxy del sidecar con token (token-v1) es fail-closed sin autenticación, '
-            + 'para que ningún proceso local pueda usar la WebUI como intermediario de la clave. '
-            + 'Actívala en Settings → Password y vuelve a intentarlo.',
+          title: 'WebUI authentication is off',
+          detail: 'The token-v1 sidecar proxy fails closed without authentication, so no '
+            + 'local process can use WebUI as a key-forwarding intermediary. Enable a '
+            + 'password in Settings → Password, then approve the proxy.',
         };
       }
       return {
-        title: 'El proxy del sidecar no está aprobado',
-        detail: 'Aprueba el proxy de esta extensión en Settings → Extensions → Installed '
-          + '(fila "OpenCode Usage" → aprobar proxy del sidecar).',
+        title: 'Sidecar proxy not approved yet',
+        detail: 'Approve it in Settings → Extensions → Diagnostics → "Loopback sidecar" '
+          + 'card → "Approve proxy consent" for OpenCode Usage.',
       };
     }
     if (status === 401 || status === 503) {
       return {
-        title: 'El sidecar no acepta el token del proxy',
-        detail: 'El servicio del sidecar está arrancado pero no lee el mismo token que la WebUI '
-          + '(o el fichero de token aún no existe). Comprueba que el sidecar y la WebUI comparten '
-          + 'el mismo state dir (~/.hermes/webui) y reinicia opencode-usage-sidecar.',
+        title: 'Sidecar rejected the proxy token',
+        detail: 'The sidecar is running but is not reading the same token as WebUI (or the '
+          + 'token file does not exist yet). Make sure the sidecar and WebUI share the same '
+          + 'state dir (~/.hermes/webui) and restart opencode-usage-sidecar.',
       };
     }
     if (status === 404) {
       return {
-        title: 'La extensión no está habilitada',
-        detail: 'El manifiesto no declara el sidecar de opencode-usage, o la extensión está '
-          + 'desactivada. Recarga la WebUI y revisa Settings → Extensions.',
+        title: 'Extension not enabled',
+        detail: 'The manifest does not declare the opencode-usage sidecar, or the extension '
+          + 'is disabled. Reload the WebUI and check Settings → Extensions.',
       };
     }
     // 502/504 and network failures are what a dead sidecar actually looks like:
     // the proxy cannot reach 127.0.0.1:17799.
     return {
-      title: 'El sidecar no responde',
-      detail: 'El proxy no pudo alcanzar 127.0.0.1:17799. Arranca el servicio del sidecar '
-        + '(`systemctl --user enable --now opencode-usage-sidecar`) y vuelve a intentarlo. '
-        + (status ? 'El proxy devolvió HTTP ' + status + '.' : ''),
+      title: 'Sidecar is not responding',
+      detail: 'The proxy could not reach 127.0.0.1:17799. Start the sidecar service '
+        + '(`systemctl --user enable --now opencode-usage-sidecar`) and try again. '
+        + (status ? 'The proxy returned HTTP ' + status + '.' : ''),
     };
   }
 
@@ -268,12 +268,12 @@
     const inTok = Number(bucket.input_tokens || 0);
     const outTok = Number(bucket.output_tokens || 0);
     const cacheTok = Number(bucket.cache_read_tokens || 0);
-    line.textContent = 'Medido por Hermes (' + (WINDOW_LABELS[windowKey] || windowKey) + '): '
-      + fmtInt(requests) + (requests === 1 ? ' petición' : ' peticiones')
-      + ' · entrada ' + fmtTokens(inTok)
-      + ' · salida ' + fmtTokens(outTok)
-      + (cacheTok > 0 ? ' · caché ' + fmtTokens(cacheTok) : '')
-      + ' · valor de lista ≈ ' + fmtUsd(bucket.estimated_cost_usd);
+    line.textContent = 'Measured by Hermes (' + (WINDOW_LABELS[windowKey] || windowKey) + '): '
+      + fmtInt(requests) + (requests === 1 ? ' request' : ' requests')
+      + ' · in ' + fmtTokens(inTok)
+      + ' · out ' + fmtTokens(outTok)
+      + (cacheTok > 0 ? ' · cache ' + fmtTokens(cacheTok) : '')
+      + ' · list-price value ≈ ' + fmtUsd(bucket.estimated_cost_usd);
     return line;
   }
 
@@ -282,12 +282,12 @@
     const bucket = byWindow[windowKey] || {};
     const models = Array.isArray(bucket.models) ? bucket.models : [];
     if (!models.length) {
-      return el('div', 'hwx-ocu-empty', 'Sin actividad de este proveedor registrada por Hermes en esta ventana.');
+      return el('div', 'hwx-ocu-empty', 'No activity for this provider recorded by Hermes in this window.');
     }
     const table = el('table', 'hwx-ocu-table');
     const thead = el('thead');
     const headRow = el('tr');
-    ['Modelo', 'Peticiones', 'Entrada', 'Salida', 'Caché', '≈ Coste'].forEach((label) => {
+    ['Model', 'Requests', 'Input', 'Output', 'Cache', '≈ Cost'].forEach((label) => {
       headRow.appendChild(el('th', null, label));
     });
     thead.appendChild(headRow);
@@ -326,10 +326,10 @@
   function renderGo(body, payload) {
     const go = (payload && payload.go) || {};
     const plan = go.plan || {};
-    const { section, badge } = sectionBlock('OpenCode Go', 'plan de suscripción');
+    const { section, badge } = sectionBlock('OpenCode Go', 'subscription plan');
 
     if (plan.available) {
-      badge.textContent = 'en vivo';
+      badge.textContent = 'live';
       badge.className = badgeClass('ok');
       const order = ['rolling', 'weekly', 'monthly'];
       order.forEach((key) => {
@@ -337,22 +337,23 @@
         if (!window) return;
         section.appendChild(windowBar(key, window.percent, window.status, window.resets_at));
       });
-      const stale = plan.cached ? ' · caché' : '';
+      const stale = plan.cached ? ' · cached' : '';
       section.appendChild(el('div', 'hwx-ocu-section-sub',
-        'Consumo del plan según OpenCode' + stale
-        + (plan.fetched_at ? ' · consultado ' + fmtClock(plan.fetched_at) : '')));
+        'Plan usage as reported by OpenCode' + stale
+        + (plan.fetched_at ? ' · fetched ' + fmtClock(plan.fetched_at) : '')));
     } else {
       const error = String(plan.error || 'unknown');
       const messages = {
-        no_key: 'No hay OPENCODE_GO_API_KEY ni OPENCODE_API_KEY en el entorno del sidecar ni en ~/.hermes/.env.',
-        invalid_key: 'OpenCode rechazó la clave de Go (HTTP 401).',
-        blocked: 'El edge de OpenCode bloqueó la consulta (HTTP 403).',
-        unreachable: 'No se pudo contactar con OpenCode desde el sidecar.',
+        no_key: 'No OPENCODE_GO_API_KEY (nor OPENCODE_API_KEY) is available to the sidecar '
+          + 'environment or ~/.hermes/.env.',
+        invalid_key: 'OpenCode rejected the Go key (HTTP 401).',
+        blocked: 'OpenCode\u2019s edge blocked the request (HTTP 403).',
+        unreachable: 'OpenCode could not be reached from the sidecar.',
       };
-      badge.textContent = error === 'no_key' ? 'sin clave' : 'no disponible';
+      badge.textContent = error === 'no_key' ? 'no key' : 'unavailable';
       badge.className = badgeClass(error === 'no_key' ? 'warn' : 'err');
       const note = el('p', 'hwx-ocu-note',
-        messages[error] || ('La consulta de cuota falló (' + error + ').'));
+        messages[error] || ('The quota lookup failed (' + error + ').'));
       section.appendChild(note);
     }
 
@@ -364,16 +365,18 @@
   function renderZen(body, payload, redraw) {
     const zen = (payload && payload.zen) || {};
     const local = zen.local || {};
-    const { section, badge } = sectionBlock('OpenCode Zen', 'pago por uso');
-    badge.textContent = 'uso local';
+    const { section, badge } = sectionBlock('OpenCode Zen', 'pay-as-you-go');
+    badge.textContent = 'local';
     badge.className = badgeClass('warn');
 
     section.appendChild(el('p', 'hwx-ocu-note', zen.api_note
-      || 'OpenCode no publica API de saldo para Zen; las cifras son el uso registrado por Hermes.'));
+      || 'OpenCode publishes no Zen balance API; these figures are the usage Hermes recorded, not an account balance.'));
+    section.appendChild(el('p', 'hwx-ocu-note',
+      'Measured locally from ~/.hermes/state.db (session_model_usage).'));
 
     if (!local.available) {
       section.appendChild(el('p', 'hwx-ocu-note',
-        'No se pudo leer el uso local (' + String(local.error || 'error') + ').'));
+        'Could not read the local usage (' + String(local.error || 'error') + ').'));
       body.appendChild(section);
       return;
     }
@@ -399,10 +402,10 @@
       ? zen.estimate.unpriced_models : [];
     if (unpriced.length) {
       section.appendChild(el('p', 'hwx-ocu-note',
-        'Sin precio publicado en la tabla de Zen, excluidos del coste: ' + unpriced.join(', ') + '.'));
+        'No published Zen price, excluded from the estimate: ' + unpriced.join(', ') + '.'));
     }
     const basis = zen.estimate && zen.estimate.price_basis;
-    if (basis) section.appendChild(el('p', 'hwx-ocu-note', 'Estimación: ' + basis + '.'));
+    if (basis) section.appendChild(el('p', 'hwx-ocu-note', 'Estimate: ' + basis + '.'));
 
     body.appendChild(section);
   }
@@ -410,7 +413,7 @@
   function renderMessage(body, title, detail) {
     const section = el('section', 'hwx-ocu-section');
     const { badge } = sectionBlock(title, '');
-    badge.textContent = 'no disponible';
+    badge.textContent = 'unavailable';
     badge.className = badgeClass('err');
     section.appendChild(el('p', 'hwx-ocu-note', detail || ''));
     body.appendChild(section);
@@ -434,8 +437,8 @@
     if (stamp) {
       const generated = payload && payload.generated_at;
       stamp.textContent = errorState
-        ? 'sin datos'
-        : (generated ? 'actualizado ' + fmtClock(generated) : '');
+        ? 'no data'
+        : (generated ? 'updated ' + fmtClock(generated) : '');
     }
   }
 
@@ -444,7 +447,7 @@
     const body = panel.querySelector('.hwx-ocu-body');
     if (!body) return;
     body.textContent = '';
-    body.appendChild(el('div', 'hwx-ocu-empty', 'Consultando el uso de OpenCode…'));
+    body.appendChild(el('div', 'hwx-ocu-empty', 'Querying OpenCode usage…'));
   }
 
   async function load(force) {
@@ -505,7 +508,7 @@
   function buildPanel() {
     const node = el('aside', 'hwx-ocu-panel');
     node.setAttribute('role', 'dialog');
-    node.setAttribute('aria-label', 'Uso de OpenCode Go y Zen');
+    node.setAttribute('aria-label', 'OpenCode Go and Zen usage');
 
     const head = el('div', 'hwx-ocu-head');
     head.appendChild(el('span', 'hwx-ocu-head-title', 'OpenCode'));
@@ -513,15 +516,15 @@
 
     const refreshBtn = el('button', 'hwx-ocu-icon-btn hwx-ocu-refresh', '⟳');
     refreshBtn.type = 'button';
-    refreshBtn.title = 'Actualizar ahora';
-    refreshBtn.setAttribute('aria-label', 'Actualizar ahora');
+    refreshBtn.title = 'Refresh now';
+    refreshBtn.setAttribute('aria-label', 'Refresh now');
     refreshBtn.addEventListener('click', () => load(true));
     head.appendChild(refreshBtn);
 
     const closeBtn = el('button', 'hwx-ocu-icon-btn hwx-ocu-close', '✕');
     closeBtn.type = 'button';
-    closeBtn.title = 'Cerrar';
-    closeBtn.setAttribute('aria-label', 'Cerrar');
+    closeBtn.title = 'Close';
+    closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.addEventListener('click', closePanel);
     head.appendChild(closeBtn);
 
@@ -529,7 +532,7 @@
     node.appendChild(el('div', 'hwx-ocu-body', ''));
 
     const foot = el('div', 'hwx-ocu-foot',
-      'Go: cuota del plan consultada a OpenCode · Zen: uso registrado por Hermes (state.db), no un saldo de cuenta.');
+      'Go: plan usage queried from OpenCode · Zen: usage recorded by Hermes (state.db), not an account balance.');
     node.appendChild(foot);
     return node;
   }
@@ -576,8 +579,8 @@
     const node = el('button', 'hwx-ocu-btn');
     node.type = 'button';
     node.id = 'btnOpenCodeUsage';
-    node.title = 'Uso de OpenCode Go y Zen';
-    node.setAttribute('aria-label', 'Uso de OpenCode Go y Zen');
+    node.title = 'OpenCode Go and Zen usage';
+    node.setAttribute('aria-label', 'OpenCode Go and Zen usage');
     node.setAttribute('aria-expanded', 'false');
     node.setAttribute('aria-haspopup', 'dialog');
     node.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"'
@@ -596,12 +599,8 @@
     const titlebar = document.querySelector('.app-titlebar');
     if (!titlebar) return false;
     button = buildButton();
-    const reload = document.getElementById('btnReload');
-    if (reload && reload.parentNode === titlebar) {
-      titlebar.insertBefore(button, reload);
-    } else {
-      titlebar.appendChild(button);
-    }
+    // Rightmost corner of the titlebar: append after Reload.
+    titlebar.appendChild(button);
     return true;
   }
 
