@@ -132,10 +132,12 @@
     return 'Resets in ' + mins + ' min';
   }
 
-  // One decimal so small plan windows stay readable (11 → 11.0%).
+  // Show a decimal only when the API actually returns a fraction (7.4 → "7.4%");
+  // whole percentages are shown plain ("7%") since the API never sends any.
   function fmtPercent(percent) {
     const n = Number(percent);
-    return Number.isFinite(n) ? n.toFixed(1) + '%' : '—';
+    if (!Number.isFinite(n)) return '—';
+    return Number.isInteger(n) ? n + '%' : n.toFixed(1) + '%';
   }
 
   function pctClass(percent, status) {
