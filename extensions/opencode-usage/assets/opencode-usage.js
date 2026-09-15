@@ -2,12 +2,14 @@
   'use strict';
 
   // ── OpenCode Go Usage extension for Hermes WebUI ─────────────────────────
-  // Adds a chip to the composer footer, right after .composer-divider, that
-  // opens a panel with the OpenCode Go plan usage: the plan's own live windows
-  // (rolling / weekly / monthly percent + reset time) straight from the
+  // Adds a status chip to the composer footer, right after .composer-divider,
+  // that opens a panel with the OpenCode Go plan usage: the plan's own live
+  // windows (rolling / weekly / monthly percent + reset time) straight from the
   // sidecar, which calls OpenCode's documented /zen/go/v1/usage endpoint. Once
   // data arrives the chip itself shows the three percentages ("Go: x%·y%·z%").
-  // A one-line summary also reports the usage Hermes recorded for Go models.
+  // Hovering the chip opens the panel; it stays pinned (fixed size, not closed
+  // on mouse-out) until dismissed by Escape / an outside click / clicking the
+  // chip again.
   //
   // All HTTP goes through the consented loopback-sidecar proxy at
   // /api/extensions/opencode-usage/sidecar/… — the API key stays in the sidecar
@@ -28,7 +30,6 @@
   const MOUNT_RETRY_MS = 400;
   const MOUNT_MAX_TRIES = 25;
   const HOVER_OPEN_DELAY = 160;
-  const HOVER_CLOSE_DELAY = 260;
 
   let panel = null;
   let button = null;
@@ -39,7 +40,6 @@
   let keyHandler = null;
   let composerObserver = null;
   let hoverOpenTimer = null;
-  let hoverCloseTimer = null;
   let lastPayload = null;
   let fixedPanelHeight = null;
   let busy = false;
@@ -306,16 +306,19 @@
     body.appendChild(section);
   }
 
-  // Size the panel to the tallest its content will ever be (the Go windows) and
-  // keep that height for every state (data / loading / error) so it never
-  // resizes. Measured once against the rendered data; the body scrolls inside.
-  function measureAndFixHeight() {
-    if (!panel || fixedPanelHeight !== null) return;
+  // Pin the panel to the tallest its content has ever been (the Go windows),
+  // grow-only, so it never shrinks when a refresh re-renders a smaller state.
+  // The body scrolls inside the fixed height.
+  function ensurePanelHeight() {
+    if (!panel) return;
     const bottom = window.parseInt(panel.style.bottom, 10) || 0;
     const avail = Math.max(120, window.innerHeight - bottom - 8);
-    const natural = panel.offsetHeight || 200;
-    fixedPanelHeight = Math.max(120, Math.min(avail, natural));
+    const measured = Math.max(120, Math.min(avail, panel.offsetHeight || 200));
+    if (fixedPanelHeight === null || measured > fixedPanelHeight) {
+      fixedPanelHeight = measured;
+    }
     panel.style.height = fixedPanelHeight + 'px';
+    panel.style.minHeight = fixedPanelHeight + 'px';
   }
 
   function render(payload, errorState) {
@@ -328,7 +331,7 @@
       renderError(body, errorState.title, errorState.detail);
     } else {
       renderGo(body, payload);
-      measureAndFixHeight();
+      ensurePanelHeight();
     }
 
     const stamp = panel.querySelector('.hwx-ocu-stamp');
@@ -351,7 +354,9 @@
     busy = true;
     const refreshBtn = panel && panel.querySelector('.hwx-ocu-refresh');
     if (refreshBtn) refreshBtn.disabled = true;
-    if (!lastPayload || force) renderLoading();
+    // Never collapse already-rendered content on a refresh: keep showing the
+    // last payload until the fresh one lands, so the panel keeps its size.
+    if (!lastPayload) renderLoading();
     try {
       const res = await fetchJSON(BASE + '/api/usage' + (force ? '?refresh=1' : ''));
       if (res.ok && res.body) {
@@ -405,20 +410,18 @@
     lastFocus = null;
   }
 
-  // ── hover behaviour (mirrors the core context-window indicator) ───────────
-  // Hovering the chip opens the panel after a short delay; moving away schedules
-  // a close with a grace period so the cursor can reach the panel. The panel
-  // absorbs that pending close while hovered. Clicking still toggles (touch and
-  // keyboard fallback).
+  // ── hover behaviour ───────────────────────────────────────────────────────
+  // Hovering the chip opens the panel after a short delay. Once open, the panel
+  // stays **pinned**: it does not close when the cursor leaves (so a refresh or
+  // a quick mouse movement does not dismiss it). It closes on Escape, on a click
+  // anywhere outside, or by clicking the chip again.
 
   function cancelHoverTimers() {
     if (hoverOpenTimer) { window.clearTimeout(hoverOpenTimer); hoverOpenTimer = null; }
-    if (hoverCloseTimer) { window.clearTimeout(hoverCloseTimer); hoverCloseTimer = null; }
   }
 
   function hoverOpen() {
     if (panel) { cancelHoverTimers(); return; }
-    if (hoverCloseTimer) { window.clearTimeout(hoverCloseTimer); hoverCloseTimer = null; }
     if (hoverOpenTimer) return;
     hoverOpenTimer = window.setTimeout(() => {
       hoverOpenTimer = null;
@@ -426,27 +429,10 @@
     }, HOVER_OPEN_DELAY);
   }
 
-  function hoverLeave() {
-    if (!panel) {
-      if (hoverOpenTimer) { window.clearTimeout(hoverOpenTimer); hoverOpenTimer = null; }
-      return;
-    }
-    if (hoverCloseTimer) return;
-    hoverCloseTimer = window.setTimeout(() => {
-      hoverCloseTimer = null;
-      closePanel();
-    }, HOVER_CLOSE_DELAY);
-  }
-
   function buildPanel() {
     const node = el('aside', 'hwx-ocu-panel');
     node.setAttribute('role', 'dialog');
     node.setAttribute('aria-label', 'OpenCode Go usage');
-    // Keep the panel open while the cursor is on it (it has a refresh button).
-    node.addEventListener('mouseenter', () => {
-      if (hoverCloseTimer) { window.clearTimeout(hoverCloseTimer); hoverCloseTimer = null; }
-    });
-    node.addEventListener('mouseleave', hoverLeave);
 
     const head = el('div', 'hwx-ocu-head');
     head.appendChild(el('span', 'hwx-ocu-head-title', 'OpenCode Go'));
@@ -521,14 +507,18 @@
 
   // ── composer chip ─────────────────────────────────────────────────────────
 
-  // A passive status chip, not a button: no focus, no click, no visual hover
-  // affordance and no title tooltip. It only reveals the panel on hover.
+  // A status chip, not a button: a <span> with no focus, no visual hover
+  // affordance and no title tooltip. Hover opens the pinned panel; clicking it
+  // toggles it (touch / explicit close).
   function buildButton() {
     const node = el('span', 'hwx-ocu-btn');
     node.id = 'btnOpenCodeUsage';
     node.appendChild(el('span', 'hwx-ocu-btn-label', BUTTON_LABEL));
     node.addEventListener('mouseenter', hoverOpen);
-    node.addEventListener('mouseleave', hoverLeave);
+    node.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openPanel(); // toggles the pinned panel
+    });
     return node;
   }
 
