@@ -2,28 +2,30 @@
    Every class is prefixed hwx-ocu- so it cannot collide with core styles, and
    colors come from core CSS variables so the panel follows the active theme/skin. */
 
+/* Same shape and size as the other chips in .composer-left
+   (.composer-model-chip / .composer-toolsets-chip / .composer-profile-chip):
+   a transparent pill with the same padding, radius and hover behaviour. */
 .hwx-ocu-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 24px;
-  padding: 0 8px;
-  margin: 0 2px;
-  flex-shrink: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
+  gap: 8px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-color: transparent;
   color: var(--muted, #888);
   font: inherit;
-  font-size: 11px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  flex-shrink: 0;
   cursor: pointer;
+  transition: color .15s, background-color .15s, border-color .15s;
 }
 .hwx-ocu-btn:hover,
 .hwx-ocu-btn[aria-expanded="true"] {
   color: var(--text, #111);
-  background: var(--hover-bg, rgba(127, 127, 127, .12));
+  background-color: var(--hover-bg, rgba(127, 127, 127, .12));
 }
 /* Once the plan percentages are on the chip, keep them legible and distinct. */
 .hwx-ocu-btn--live { color: var(--accent, #3889fd); }
@@ -31,19 +33,21 @@
 
 .hwx-ocu-panel {
   position: fixed;
-  z-index: 60;
-  /* left/bottom are computed from the composer chip at open time (placePanel),
-     so the popover always opens above the chip. */
-  width: min(380px, calc(100vw - 24px));
+  z-index: 200;
+  /* left/bottom are computed at open time (placePanel) so the popover opens
+     above the chip and right-aligned with the composer, like core's dropdowns. */
+  width: min(360px, calc(100vw - 24px));
   max-height: min(70vh, 620px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--border, rgba(127, 127, 127, .3));
+  /* Same surface as core's composer dropdowns (.composer-toolsets-dropdown,
+     .ws-dropdown): --surface + --border2 + the upward shadow. */
+  background: var(--surface, var(--bg, #fff));
+  border: 1px solid var(--border2, rgba(127, 127, 127, .3));
   border-radius: 10px;
-  background: var(--panel-bg, var(--bg, #fff));
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, .4);
   color: var(--text, #111);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .28);
   font-size: 13px;
 }
 

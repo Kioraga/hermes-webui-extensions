@@ -474,13 +474,15 @@
     return node;
   }
 
-  // Anchor the popover above the composer chip: bottom-aligned to the chip's
-  // top edge, horizontally clamped so it stays inside the viewport.
+  // Anchor the popover above the chip and right-align it with the composer, the
+  // way core's own composer dropdowns sit, then clamp it into the viewport.
   function placePanel() {
     if (!panel || !button) return;
     const anchor = button.getBoundingClientRect();
-    const width = panel.offsetWidth || 380;
-    let left = anchor.right - width;
+    const box = document.querySelector('.composer-box');
+    const rightEdge = box ? box.getBoundingClientRect().right : (window.innerWidth - 12);
+    const width = panel.offsetWidth || 360;
+    let left = rightEdge - width;
     if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
     if (left < 8) left = 8;
     const bottom = Math.max(8, window.innerHeight - anchor.top + 8);

@@ -172,7 +172,10 @@ blame your credentials for an edge rejection.
 - `extension-settings`: `HermesExtensionSettings.settingsForExtension(id)` with
   `settings_schema` + `permissions.storage.owned: true`
 - DOM integration point: `.composer-footer` → `.composer-divider` (the chip is
-  inserted right after it, inside `.composer-left`)
+  inserted right after it, inside `.composer-left`); `.composer-box` gives the
+  right edge the panel aligns to. Styling mirrors the core chips
+  (`.composer-*-chip`) and composer dropdowns (`.composer-toolsets-dropdown`,
+  `.ws-dropdown`): pill chip, `--surface` + `--border2` + `0 -4px 24px` shadow.
 - WebUI API surface: `GET /api/extensions/status`
 
 ## Verification
