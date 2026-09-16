@@ -6,6 +6,7 @@
     {"path": "scripts/test-extension-validator.mjs", "runner": "node"},
     {"path": "scripts/test-message-pins-sync.mjs", "runner": "node"},
     {"path": "scripts/test-mobile-haptics.mjs", "runner": "node"},
+    {"path": "scripts/test-opencode-redirect.py", "runner": "python"},
     {"path": "scripts/test-profile-avatars.py", "runner": "python"},
     {"path": "scripts/test-sidecar-contract.mjs", "runner": "node"},
     {"path": "scripts/test-sidecar-scaffold.py", "runner": "python"},
