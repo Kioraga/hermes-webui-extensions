@@ -5,11 +5,11 @@ Every route here runs behind the scaffold's deny-by-default token guard
 The work lives in ``opencode_usage.py`` — this file only maps HTTP routes onto it
 and shapes the JSON response.
 
-Both routes are read-only: they read API keys (env or ``~/.hermes/.env``) to make
-one outbound GET for the Go plan windows, and they aggregate Hermes' own
-``state.db`` in read-only mode. Nothing here mutates state, so the only verb is
-GET. The outbound call is capped at 6 s, comfortably inside the proxy's ~10 s
-buffered upstream timeout, so no start-job/poll dance is needed.
+Both routes are read-only: they read the API key (env or ``~/.hermes/.env``) to make
+one outbound GET for the Go plan windows. Nothing here mutates state, so the only
+verb is GET. The outbound call is capped at 6 s and refuses redirects, comfortably
+inside the proxy's ~10 s buffered upstream timeout, so no start-job/poll dance is
+needed.
 """
 from __future__ import annotations
 
