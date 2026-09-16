@@ -2,32 +2,25 @@
    Every class is prefixed hwx-ocu- so it cannot collide with core styles, and
    colors come from core CSS variables so the panel follows the active theme/skin. */
 
-/* A passive status chip — styling mirrors core's .provider-quota-chip (same
-   compact pill, border and green tint) so it sits beside it at the same size
-   and does not perturb the composer footer's fit. Not a button: no focus, no
-   hover affordance and no click; it only reacts to hover (via JS). */
+/* A passive status chip — same pill as the other .composer-left chips
+   (composer-divider neighbours), not the compact quota chip. No border or tinted
+   background, so it reads as a composer control, not as an alert. Not a button:
+   no focus, no hover affordance and no click; it only reacts to hover (via JS). */
 .hwx-ocu-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 30px;
-  max-width: 120px;
-  padding: 5px 8px;
-  border: 1px solid var(--border2, rgba(127, 127, 127, .3));
+  gap: 8px;
+  padding: 8px 10px 8px 12px;
   border-radius: 999px;
-  background: rgba(34, 197, 94, .10);
-  color: var(--text, #111);
+  color: var(--muted, #888);
   font: inherit;
-  font-size: 11px;
-  font-weight: 650;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  line-height: 1;
   white-space: nowrap;
   flex-shrink: 0;
   user-select: none;
   cursor: default;
 }
-.hwx-ocu-btn-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Once the plan percentages are on the chip, keep them legible: --accent-text
    passes AA on the surface, --accent alone does not. */
 .hwx-ocu-btn--live { color: var(--accent-text, var(--accent, #3889fd)); }
@@ -38,11 +31,6 @@
 @media (max-width: 640px) {
   .hwx-ocu-btn { display: none; }
 }
-
-/* Core collapses .composer-left in two stages (cf-icons, then cf-burger) to
-   gain width. This is an informational chip, so it steps aside in both. */
-.composer-footer.cf-icons .hwx-ocu-btn { display: none; }
-.composer-footer.cf-burger .hwx-ocu-btn { display: none !important; }
 
 .hwx-ocu-panel {
   position: fixed;

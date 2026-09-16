@@ -10,13 +10,11 @@ endpoint. Once data arrives the chip itself shows those three percentages as
 ## What It Does
 
 - Adds a passive **OpenCode Go** status chip to the composer footer, right after
-  the model chip (`.composer-model-wrap`), beside `#providerQuotaChip`, with the
-  same styling. It is **not a button**: no focus, no click, no hover
+  the model chip (`.composer-model-wrap`), looking like the other `.composer-left`
+  pills. It is **not a button**: no focus, no click, no hover
   highlight and no title tooltip. Hovering it opens the panel after a short delay;
   the panel stays **pinned** (it does not close when the cursor leaves) and is
-  dismissed with `Escape`, clicking the chip again, or a click outside. In core's
-  collapsed footer stages (`cf-icons` / `cf-burger`) the chip steps aside so it
-  does not perturb the fit.
+  dismissed with `Escape`, clicking the chip again, or a click outside.
 - The panel grows **to the right of the chip**, shows a small **callout tail**
   pointing down at the chip, and animates in (fade + 5 px nudge, `.14s` ease) —
   the same visual language as the context-window tooltip.
@@ -162,12 +160,11 @@ blame your credentials for an edge rejection.
 - DOM integration point: `.composer-footer` → `.composer-model-wrap` (the chip is
   inserted right after it, inside `.composer-left`, beside `#providerQuotaChip`),
   and the panel grows to the right of the chip with a callout tail pointing at it.
-  Styling mirrors the core `#providerQuotaChip` (compact pill) and the
+  Styling mirrors the core composer chips (`.composer-*-chip`) and the
   context-window tooltip (`.ctx-tooltip`): `--surface` + `--border2` +
   `0 -4px 24px` shadow, `::after` tail and an opacity/translate entry animation.
   The chip uses core tokens (`--warning`, `--error`, `--accent-text`) for color.
-- Collapse stages: the chip hides under `.composer-footer.cf-icons` and
-  `.composer-footer.cf-burger` and under `max-width: 640px` (phones).
+- The chip hides on phones (`@media max-width: 640px`).
 - WebUI API surface: `GET /api/extensions/status`
 
 ## Verification
