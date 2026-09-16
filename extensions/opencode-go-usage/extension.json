@@ -1,7 +1,7 @@
 {
   "id": "opencode-go-usage",
   "name": "OpenCode Go Usage",
-  "description": "Titlebar panel showing OpenCode Go plan usage: rolling / weekly / monthly windows straight from OpenCode's own usage endpoint, via a loopback sidecar that keeps the API key out of the browser.",
+  "description": "Composer chip opening a panel with OpenCode Go plan usage: rolling / weekly / monthly windows straight from OpenCode's own usage endpoint, via a loopback sidecar that keeps the API key out of the browser.",
   "version": "0.1.0",
   "author": "kioraga",
   "assets": {
@@ -50,7 +50,7 @@
     "filesystem": {
       "arbitrary": false,
       "serves_bundled_assets": true,
-      "note": "The browser assets read no files. The sidecar reads two local files read-only: the API keys from ~/.hermes/.env (when they are not in its environment) and Hermes' own state.db in SQLite mode=ro to aggregate recorded usage. Nothing is written."
+      "note": "The browser assets read no files. The sidecar reads one local file, read-only: the API key from ~/.hermes/.env (when it is not already in its environment). No application or state data is written; Python may create bounded bytecode caches inside the extension sidecar runtime directory."
     },
     "network_external": true,
     "network_external_note": "The sidecar makes one outbound GET to OpenCode's documented usage endpoint (opencode.ai/zen/go/v1/usage) with the Go API key. The browser extension assets contact no external origin; they only call the same-origin sidecar proxy."

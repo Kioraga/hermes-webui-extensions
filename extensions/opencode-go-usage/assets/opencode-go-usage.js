@@ -2,8 +2,9 @@
   'use strict';
 
   // ── OpenCode Go Usage extension for Hermes WebUI ─────────────────────────
-  // Adds a status chip to the composer footer, right after .composer-divider,
-  // that opens a panel with the OpenCode Go plan usage: the plan's own live
+  // Adds a status chip to the composer footer, right after the model chip
+  // (.composer-model-wrap, beside #providerQuotaChip), that opens a panel with
+  // the OpenCode Go plan usage: the plan's own live
   // windows (rolling / weekly / monthly percent + reset time) straight from the
   // sidecar, which calls OpenCode's documented /zen/go/v1/usage endpoint. Once
   // data arrives the chip itself shows the three percentages ("Go: x%·y%·z%").
@@ -405,6 +406,9 @@
     keyHandler = null;
     if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
     panel = null;
+    // Re-measure on the next open: one tall error state must not condition
+    // every later open.
+    fixedPanelHeight = null;
     if (button && typeof button.focus === 'function') button.focus();
     lastFocus = null;
   }
@@ -481,10 +485,7 @@
     panel.style.visibility = '';
 
     keyHandler = (event) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation();
-        closePanel();
-      }
+      if (event.key === 'Escape') closePanel();
     };
     // Composer-tool behaviour: pressing any other control (or clicking anywhere
     // outside) dismisses the popover. Capture phase, so core's own handlers
@@ -522,13 +523,14 @@
 
   function mount() {
     if (button && document.body.contains(button)) return true;
-    const divider = document.querySelector('.composer-footer .composer-divider');
-    if (!divider || !divider.parentNode) return false;
+    const anchor = document.querySelector('.composer-footer .composer-left .composer-model-wrap');
+    if (!anchor || !anchor.parentNode) return false;
     if (!button) button = buildButton();
-    // Chip in .composer-left, right after the divider.
-    const next = divider.nextSibling;
-    if (next) divider.parentNode.insertBefore(button, next);
-    else divider.parentNode.appendChild(button);
+    // Chip in .composer-left, right after the model chip (beside #providerQuotaChip),
+    // adopting that chip's styling so it does not perturb core's footer fit.
+    const next = anchor.nextSibling;
+    if (next) anchor.parentNode.insertBefore(button, next);
+    else anchor.parentNode.appendChild(button);
     watchComposer();
     refreshButtonLabel();
     return true;

@@ -1,7 +1,7 @@
 # OpenCode Go Usage
 
 **OpenCode Go Usage** is a trusted local Hermes WebUI extension that adds a chip to
-the composer footer (right after the composer divider) opening a panel with the
+the composer footer (right after the model chip) opening a panel with the
 **OpenCode Go plan usage**: the plan's own live windows — rolling 5 h, weekly and
 monthly — as percentages with their reset times, straight from OpenCode's usage
 endpoint. Once data arrives the chip itself shows those three percentages as
@@ -10,11 +10,13 @@ endpoint. Once data arrives the chip itself shows those three percentages as
 ## What It Does
 
 - Adds a passive **OpenCode Go** status chip to the composer footer, right after
-  `.composer-divider`. It is **not a button**: no focus, no click, no hover
-  highlight and no title tooltip. Like the core context-window indicator,
-  hovering the chip opens the panel after a short delay and moving away closes it
-  with a grace period so the cursor can reach it; the panel stays open while
-  hovered, and `Escape` / clicking outside dismiss it.
+  the model chip (`.composer-model-wrap`), beside `#providerQuotaChip`, with the
+  same styling. It is **not a button**: no focus, no click, no hover
+  highlight and no title tooltip. Hovering it opens the panel after a short delay;
+  the panel stays **pinned** (it does not close when the cursor leaves) and is
+  dismissed with `Escape`, clicking the chip again, or a click outside. In core's
+  collapsed footer stages (`cf-icons` / `cf-burger`) the chip steps aside so it
+  does not perturb the fit.
 - The panel grows **to the right of the chip**, shows a small **callout tail**
   pointing down at the chip, and animates in (fade + 5 px nudge, `.14s` ease) —
   the same visual language as the context-window tooltip.
@@ -38,7 +40,7 @@ verbatim — it is OpenCode's own accounting, no scraping.
 ```text
 Hermes WebUI page
   -> manifest-bundled extension assets (/extensions/opencode-go-usage/assets/*)
-  -> composer chip (right after .composer-divider) -> panel
+  -> composer chip (right after the model chip) -> panel
   -> same-origin sidecar proxy: /api/extensions/opencode-go-usage/sidecar/api/usage
   -> sidecar (127.0.0.1:17799, token-v1)
        -> GET opencode.ai/zen/go/v1/usage        (Go API key, live plan windows)
@@ -108,10 +110,11 @@ Browser assets (`assets/opencode-go-usage.js` / `.css`):
 Sidecar (`sidecar/`, testable in isolation):
 
 - reads the Go API key from its own environment or `~/.hermes/.env`;
-- makes one outbound `GET` to `opencode.ai/zen/go/v1/usage` with that key;
-- opens `~/.hermes/state.db` **read-only** (`file:…?mode=ro`) and reads only
-  `session_model_usage`;
-- writes nothing, anywhere;
+- makes one outbound `GET` to `opencode.ai/zen/go/v1/usage` with that key, refusing
+  any redirect (so the key cannot follow a redirect to an unknown host) and capping
+  the response size;
+- writes no application or state data (Python may create bounded bytecode caches
+  inside the sidecar's own directory);
 - never returns the key, and does not log requests (the scaffold suppresses request
   logging so an `Authorization` header cannot land in a log).
 
@@ -126,8 +129,9 @@ token file or read your `.env` directly. Nothing here changes that.
 - Vendored runtime at `sidecar/`; `sidecar_base.py` and `sidecar.py` are
   byte-identical to the canonical scaffold and must stay that way.
 - One route: `GET /api/usage` (`?refresh=1` bypasses the 60 s plan cache). The
-  outbound call is capped at 6 s, inside the proxy's ~10 s buffered upstream
-  timeout, so there is no job/poll dance.
+  outbound call is capped at 6 s and its body at 64 KiB, comfortably inside the
+  proxy's ~10 s buffered upstream timeout and 512 KiB cap, so there is no
+  job/poll dance. Redirects are refused outright.
 - `routes_impl.py` holds routes only; all logic is in `opencode_usage.py`.
 
 ### The User-Agent is load-bearing
@@ -144,9 +148,9 @@ blame your credentials for an edge rejection.
 - **Loopback only.** Sidecars cannot work against a bridge-networked WebUI
   container: `127.0.0.1` is namespace-local, so core and sidecar must share a
   network namespace and the state dir.
-- The chip mounts right after `.composer-divider` inside `.composer-left`; a core
-  rename of those would require an update — standard for a DOM-injection
-  extension.
+- The chip mounts right after `.composer-model-wrap` inside `.composer-left` (beside
+  `#providerQuotaChip`); a core rename of those would require an update — standard
+  for a DOM-injection extension.
 
 ## Compatibility
 
@@ -155,12 +159,15 @@ blame your credentials for an edge rejection.
   `/api/extensions/<id>/sidecar/…`
 - `extension-settings`: `HermesExtensionSettings.settingsForExtension(id)` with
   `settings_schema` + `permissions.storage.owned: true`
-- DOM integration point: `.composer-footer` → `.composer-divider` (the chip is
-  inserted right after it, inside `.composer-left`), and the panel grows to the
-  right of the chip with a callout tail pointing at it. Styling mirrors the core
-  chips (`.composer-*-chip`) and context tooltip (`.ctx-tooltip`): pill chip,
-  `--surface` + `--border2` + `0 -4px 24px` shadow, `::after` tail and an
-  opacity/translate entry animation.
+- DOM integration point: `.composer-footer` → `.composer-model-wrap` (the chip is
+  inserted right after it, inside `.composer-left`, beside `#providerQuotaChip`),
+  and the panel grows to the right of the chip with a callout tail pointing at it.
+  Styling mirrors the core `#providerQuotaChip` (compact pill) and the
+  context-window tooltip (`.ctx-tooltip`): `--surface` + `--border2` +
+  `0 -4px 24px` shadow, `::after` tail and an opacity/translate entry animation.
+  The chip uses core tokens (`--warning`, `--error`, `--accent-text`) for color.
+- Collapse stages: the chip hides under `.composer-footer.cf-icons` and
+  `.composer-footer.cf-burger` and under `max-width: 640px` (phones).
 - WebUI API surface: `GET /api/extensions/status`
 
 ## Verification
@@ -171,6 +178,7 @@ node scripts/scan-extension-safety.mjs
 node scripts/sync-sidecar-base.mjs --check
 node scripts/check-sidecar-usage.mjs
 node --check extensions/opencode-go-usage/assets/opencode-go-usage.js
+python3 scripts/test-opencode-redirect.py
 python3 -m json.tool extensions/opencode-go-usage/extension.json
 python3 -m json.tool extensions/opencode-go-usage/manifest.json
 ```
@@ -187,8 +195,8 @@ Manual verification:
 
 - hovering the composer's **OpenCode Go** chip opens the panel to its right (with
   a callout tail and a fade-in); the chip label shows `Go: x%·y%·z%` matching
-  `GET opencode.ai/zen/go/v1/usage` for your key; moving the cursor away closes
-  it
+  `GET opencode.ai/zen/go/v1/usage` for your key; the panel stays pinned until
+  `Escape`, clicking the chip again, or a click outside
 - the percent bars and "resets in …" countdowns agree with the raw endpoint
 - with the sidecar stopped, the panel explains that the sidecar is not answering
   instead of showing empty bars
