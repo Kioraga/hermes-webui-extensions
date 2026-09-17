@@ -94,8 +94,9 @@ This is trusted local code running with WebUI session authority.
 
 Browser assets (`assets/opencode-go-usage.js` / `.css`):
 
-- create extension-owned DOM (a composer chip and a `position: fixed` panel) and
-  never mutate core views;
+- create extension-owned DOM — one chip inserted into core's `.composer-left`
+  and a `position: fixed` panel on `<body>` — declared honestly as
+  `permissions.dom.mutates_core_views: true`;
 - call exactly two same-origin endpoints: `GET /api/extensions/status` (to explain
   a missing sidecar/proxy consent) and
   `GET /api/extensions/opencode-go-usage/sidecar/api/usage`;
@@ -164,7 +165,10 @@ blame your credentials for an edge rejection.
   context-window tooltip (`.ctx-tooltip`): `--surface` + `--border2` +
   `0 -4px 24px` shadow, `::after` tail and an opacity/translate entry animation.
   The chip uses core tokens (`--warning`, `--error`, `--accent-text`) for color.
-- The chip hides on phones (`@media max-width: 640px`).
+- The chip hides on phones (`@media max-width: 640px`), and steps aside in core's
+  two composer-collapse stages (`.composer-footer.cf-icons` /
+  `.composer-footer.cf-burger`) so it never pushes core into hiding its own
+  model/workspace labels earlier than it otherwise would.
 - WebUI API surface: `GET /api/extensions/status`
 
 ## Verification
