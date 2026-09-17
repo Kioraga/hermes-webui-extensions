@@ -32,6 +32,16 @@
   .hwx-ocu-btn { display: none; }
 }
 
+/* Core collapses .composer-left in two stages (cf-icons, then cf-burger) when
+   _fitComposerFooter() measures an overflow, shrinking its own chips to icons
+   and then hiding the model wrap outright. A chip that keeps its full pill
+   width through those stages shifts core's collapse threshold (measured: the
+   cf-icons flip moves from ~720px to ~868px with the live label), so core's
+   model and workspace labels disappear earlier than they should. This is an
+   informational chip, so it steps aside in both stages instead. */
+.composer-footer.cf-icons .hwx-ocu-btn { display: none; }
+.composer-footer.cf-burger .hwx-ocu-btn { display: none !important; }
+
 .hwx-ocu-panel {
   position: fixed;
   z-index: 200;

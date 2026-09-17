@@ -39,7 +39,7 @@
     "webui_navigation": false,
     "dom": {
       "owned": true,
-      "mutates_core_views": false
+      "mutates_core_views": true
     },
     "storage": {
       "owned": true,
