@@ -11,9 +11,10 @@ endpoint. Once data arrives the chip itself shows those three percentages as
 
 - Adds a passive **OpenCode Go** status chip to the composer footer, right after
   the model chip (`.composer-model-wrap`), looking like the other `.composer-left`
-  pills. It is **not a button**: no focus, no click, no hover
-  highlight and no title tooltip. Hovering it opens the panel after a short delay;
-  the panel stays **pinned** (it does not close when the cursor leaves) and is
+  pills. It is **not a focusable button**: no focus, no hover
+  highlight and no title tooltip. Hovering it opens the panel after a short delay
+  (moving away before the delay elapses cancels the open); clicking it toggles the
+  panel. The panel stays **pinned** (it does not close when the cursor leaves) and is
   dismissed with `Escape`, clicking the chip again, or a click outside.
 - The panel grows **to the right of the chip**, shows a small **callout tail**
   pointing down at the chip, and animates in (fade + 5 px nudge, `.14s` ease) —

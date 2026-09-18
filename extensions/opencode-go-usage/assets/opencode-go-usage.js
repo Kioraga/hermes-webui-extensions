@@ -521,6 +521,11 @@
     node.id = 'btnOpenCodeUsage';
     node.appendChild(el('span', 'hwx-ocu-btn-label', BUTTON_LABEL));
     node.addEventListener('mouseenter', hoverOpen);
+    // Leaving the chip disarms a not-yet-fired open timer, so a fly-over across
+    // the footer cannot pin a panel the user never asked for. (Once the panel is
+    // open it stays pinned — closing is Escape / outside click / clicking the
+    // chip — so this only ever cancels the pending-open state.)
+    node.addEventListener('mouseleave', cancelHoverTimers);
     node.addEventListener('click', (event) => {
       event.stopPropagation();
       openPanel(); // toggles the pinned panel

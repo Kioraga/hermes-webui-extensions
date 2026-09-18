@@ -203,4 +203,34 @@ assert.equal(
     '(openPanel must cancel hover timers before toggling)'
 );
 
+// 5. Sibling ordering (Fable finding): leaving the chip must disarm the timer.
+//    Hover, move away, and the panel must never open on its own.
+const h2 = createHarness();
+assert.ok(h2.chip, 'composer chip should mount');
+h2.chip.dispatch('mouseenter');
+assert.ok(
+  [...h2.timers.values()].some((t) => t.delay === 160),
+  'hover should arm the delayed-open timer'
+);
+h2.chip.dispatch('mouseleave');
+h2.flushTimers();
+assert.equal(
+  h2.panelCount(),
+  0,
+  'REGRESSION: a fly-over pinned the panel — mouseleave must cancel the pending hover timer'
+);
+
+// 6. The invariant behind both fixes: no hover timer survives a transition.
+const h3 = createHarness();
+h3.chip.dispatch('mouseenter');
+h3.chip.dispatch('click');          // opens
+assert.equal(h3.panelCount(), 1, 'click during hover delay opens the panel');
+h3.chip.dispatch('click');          // toggles closed
+assert.equal(h3.panelCount(), 0, 'clicking the chip again closes the panel');
+assert.equal(
+  [...h3.timers.values()].filter((t) => t.delay === 160).length,
+  0,
+  'no pending hover-open timer may survive an open/close transition'
+);
+
 console.log('ok - hover-then-click does not flash the opencode-go-usage panel shut');
