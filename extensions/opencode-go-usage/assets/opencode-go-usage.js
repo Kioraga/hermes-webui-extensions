@@ -473,6 +473,13 @@
   }
 
   function openPanel() {
+    // A pending hover timer must never survive an open/toggle. Entering the chip
+    // arms a HOVER_OPEN_DELAY timer; clicking before it fires opens the panel
+    // here, and the still-pending timer would then re-enter openPanel() and take
+    // the toggle branch below — closing the panel the user just opened. Cancel
+    // first so hover-then-click (the natural gesture beside core's click-to-open
+    // chips) cannot flash the panel shut.
+    cancelHoverTimers();
     if (panel) { closePanel(); return; }
     lastFocus = document.activeElement;
     panel = buildPanel();
